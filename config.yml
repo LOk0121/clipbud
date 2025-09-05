@@ -1,0 +1,18 @@
+actions:
+  - label: "Fix typos and grammar"
+    prompt: "Fix typos and grammar of the following text, only return the fixed text and nothing else:"
+    key: "T"
+    model: "gpt-4o"
+    provider: "openai"
+
+  - label: "Summarize"
+    prompt: "Summarize the following text, only return the summary and nothing else:"
+    key: "S"
+    model: "gpt-4o"
+    provider: "openai"
+
+  - label: "Make Friendly"
+    prompt: "Make the following text more friendly, only return the friendly text and nothing else:"
+    key: "F"
+    model: "gpt-4o"
+    provider: "openai"

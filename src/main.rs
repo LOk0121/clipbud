@@ -1,34 +1,21 @@
 use std::sync::mpsc;
 
+use clap::Parser;
+
+mod ai;
 mod clipboard;
 mod ui;
 
+#[derive(Debug, Parser)]
+struct Arguments {
+    #[arg(short, long, default_value = "~/.clipbud/config.yaml")]
+    config: String,
+}
+
 fn main() -> anyhow::Result<()> {
-    let config = ui::Config {
-        actions: vec![
-            ui::Action::new(
-                "Fix typos and grammar".to_string(),
-                "Fix typos and grammar of the following text, only return the fixed text and nothing else:".to_string(),
-                "T".to_string(),
-                "gpt-4o".to_string(),
-                "openai".to_string(),
-            )?,
-            ui::Action::new(
-                "Summarize".to_string(),
-                "Summarize the following text, only return the summary and nothing else:".to_string(),
-                "S".to_string(),
-                "gpt-4o".to_string(),
-                 "openai".to_string(),
-            )?,
-            ui::Action::new(
-                "Make Friendly".to_string(),
-                "Make the following text more friendly, only return the friendly text and nothing else:".to_string(),
-                "F".to_string(),
-                "gpt-4o".to_string(),
-                "openai".to_string(),
-            )?,
-        ],
-    };
+    let args = Arguments::parse();
+    let config = ai::Config::from_file(&args.config)?;
+
     let (event_tx, event_rx) = mpsc::channel();
 
     let shutdown = clipboard::start_observer(event_tx);

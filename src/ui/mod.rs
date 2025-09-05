@@ -8,9 +8,7 @@ use tray_icon::{
 
 use crate::clipboard;
 
-mod config;
-
-pub(crate) use config::{Action, Config};
+use crate::ai::Config;
 
 pub(crate) struct UI {
     clipboard_text: String,
@@ -18,6 +16,11 @@ pub(crate) struct UI {
     window_size: egui::Vec2,
     window_position: egui::Pos2,
     config: Config,
+
+    // Loading state for actions
+    is_loading: bool,
+    loading_start_time: std::time::Instant,
+    current_action_label: String,
 
     clipboard_rx: mpsc::Receiver<clipboard::Event>,
     action_response_rx: mpsc::Receiver<String>,
@@ -61,10 +64,13 @@ impl UI {
             window_visible: false,
             window_size: egui::vec2(400.0, 200.0),
             window_position: egui::pos2(-2000.0, -2000.0),
+            config,
+            is_loading: false,
+            loading_start_time: std::time::Instant::now(),
+            current_action_label: String::new(),
             clipboard_rx,
             action_response_rx,
             action_response_tx,
-            config,
             quit_menu_item,
             _tray_icon,
         })
@@ -85,6 +91,9 @@ impl UI {
             if let Err(e) = clipboard::set_clipboard_text(response) {
                 eprintln!("failed to set clipboard text: {}", e);
             }
+            // Stop loading when response is received
+            self.is_loading = false;
+            self.current_action_label.clear();
             // self.hide_window(ctx);
         }
     }
@@ -140,6 +149,7 @@ impl UI {
         self.window_visible = false;
         self.window_position = egui::pos2(-2000.0, -2000.0);
         ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(self.window_position));
+        ctx.request_repaint();
     }
 
     fn hide_if_esc_pressed(&mut self, ctx: &egui::Context) {
@@ -174,15 +184,50 @@ impl UI {
     }
 
     fn trigger_action_on_keypress(&mut self, ctx: &egui::Context) {
+        if self.is_loading {
+            return;
+        }
+
         // check for action key presses
         for action in self.config.actions.iter() {
-            if !action.key.is_empty()
-                && ctx.input(|i| i.key_pressed(egui::Key::from_name(&action.key).unwrap()))
+            if action.key.is_some()
+                && ctx.input(|i| {
+                    i.key_pressed(egui::Key::from_name(action.key.as_ref().unwrap()).unwrap())
+                })
             {
+                self.is_loading = true;
+                self.loading_start_time = std::time::Instant::now();
+                self.current_action_label = action.label.clone();
                 action.trigger(&self.clipboard_text, self.action_response_tx.clone());
                 break;
             }
         }
+    }
+
+    fn render_spinner(&self, ui: &mut egui::Ui) {
+        let elapsed = self.loading_start_time.elapsed().as_secs_f32();
+        let radians_per_second = elapsed * 2.0;
+
+        ui.allocate_ui_with_layout(
+            egui::vec2(40.0, 40.0),
+            egui::Layout::centered_and_justified(egui::Direction::TopDown),
+            |ui| {
+                let (rect, _) =
+                    ui.allocate_exact_size(egui::vec2(30.0, 30.0), egui::Sense::hover());
+                let painter = ui.painter();
+                let center = rect.center();
+                let radius = 12.0;
+
+                // spinning circle
+                let stroke = egui::Stroke::new(3.0, egui::Color32::from_rgb(100, 150, 255));
+                painter.circle_stroke(center, radius, stroke);
+                // moving dot
+                let dot_angle = radians_per_second;
+                let dot_pos =
+                    center + egui::vec2(radius * dot_angle.cos(), radius * dot_angle.sin());
+                painter.circle_filled(dot_pos, 4.0, egui::Color32::from_rgb(100, 150, 255));
+            },
+        );
     }
 
     fn render(&mut self, ctx: &egui::Context) {
@@ -210,9 +255,23 @@ impl UI {
 
                     ui.separator();
 
-                    for action in self.config.actions.iter() {
-                        if ui.button(action.button_text()).clicked() {
-                            action.trigger(&self.clipboard_text, self.action_response_tx.clone());
+                    if self.is_loading {
+                        // Show loading state with current action label
+                        ui.horizontal(|ui| {
+                            self.render_spinner(ui);
+                            ui.label(&self.current_action_label);
+                        });
+                        // Buttons are hidden during loading (no buttons shown at all)
+                    } else {
+                        // Normal state - buttons are interactive
+                        for action in self.config.actions.iter() {
+                            if ui.button(action.button_text()).clicked() {
+                                self.is_loading = true;
+                                self.loading_start_time = std::time::Instant::now();
+                                self.current_action_label = action.label.clone();
+                                action
+                                    .trigger(&self.clipboard_text, self.action_response_tx.clone());
+                            }
                         }
                     }
 
