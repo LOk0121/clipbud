@@ -1,0 +1,15 @@
+[package]
+name = "clipbud"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+clipboard-rs = "0.3.0"
+ctrlc = "3.4.7"
+mouse_position = "0.1.4"
+eframe = "0.29.1"
+egui = "0.29.1"
+rig-core = "0.19.0"
+tokio = { version = "1.47.1", features = ["full", "rt"] }
+tray-icon = "0.21.1"
+anyhow = "1.0.99"
