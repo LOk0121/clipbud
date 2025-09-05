@@ -16,7 +16,7 @@
 
 </div>
 
-Clipboard Buddy (`clipbud`) is a utility that interacts with your system clipboard and augments it with AI capabilities. You can register a set of custom action prompts and recall them at any time on your clipboard contents using a custom global hotkey. The power of this mechanism is that it works with any application since it reads and writes directly from and to the system clipboard.
+Clipboard Buddy (`clipbud`) is a cross platform utility that interacts with your system clipboard and augments it with AI capabilities. You can register a set of custom action prompts and recall them at any time on your clipboard contents using a custom global hotkey. The power of this mechanism is that it works with any application since it reads and writes directly from and to the system clipboard.
 
 <div align="center">
   <img alt="Clipboard Buddy" src="https://raw.githubusercontent.com/evilsocket/clipbud/main/clipbud.gif" />
@@ -24,7 +24,7 @@ Clipboard Buddy (`clipbud`) is a utility that interacts with your system clipboa
 
 ## Quick Start
 
-`clipbud` is published as a binary crate on [crates.io](https://crates.io/crates/clipbud), if you have [Cargo installed](https://rustup.rs/) you can:
+`clipbud` is published as a binary crate on [crates.io](https://crates.io/crates/clipbud). If you have [Cargo installed](https://rustup.rs/), you can:
 
 ```sh
 cargo install clipbud
