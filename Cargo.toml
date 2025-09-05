@@ -1,7 +1,14 @@
 [package]
 name = "clipbud"
+description = "AI powered clipboard assistant"
+keywords = ["ai", "clipboard", "assistant"]
 version = "0.1.0"
+authors = ["Simone Margaritelli <evilsocket@gmail.com>"]
+license = "GPL-3.0"
 edition = "2024"
+readme = "README.md"
+repository = "https://github.com/evilsocket/clipbud"
+homepage = "https://github.com/evilsocket/clipbud"
 
 [dependencies]
 clipboard-rs = "0.3.0"
@@ -18,3 +25,27 @@ serde_yaml = "0.9.34"
 serde = "1.0.219"
 shellexpand = "3.1.1"
 global-hotkey = "0.7.0"
+
+[profile.release]
+lto = true        # Enable link-time optimization
+codegen-units = 1 # Reduce number of codegen units to increase optimizations
+panic = 'abort'   # Abort on panic
+strip = true      # Strip symbols from binary
+
+[profile.deb]
+inherits = "release"
+debug = false
+
+[package.metadata.deb]
+maintainer = "Simone Margaritelli <evilsocket@gmail.com>"
+license-file = ["LICENSE", "0"]
+section = "utils"
+priority = "optional"
+assets = [
+  ["target/release/clipbud", "usr/bin/", "755"],
+  ["LICENSE", "usr/share/doc/clipbud/", "644"],
+  ["README.md", "usr/share/doc/clipbud/README", "644"]
+]
+extended-description = """\
+Clipbud is a AI powered clipboard assistant.
+"""
