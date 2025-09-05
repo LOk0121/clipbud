@@ -280,15 +280,21 @@ impl UI {
                         // Buttons are hidden during loading (no buttons shown at all)
                     } else {
                         // Normal state - buttons are interactive
-                        for action in self.config.actions.iter() {
-                            if ui.small_button(action.button_text()).clicked() {
-                                self.is_loading = true;
-                                self.loading_start_time = std::time::Instant::now();
-                                self.current_action_label = action.label.clone();
-                                action
-                                    .trigger(&self.clipboard_text, self.action_response_tx.clone());
-                            }
-                        }
+                        ui.horizontal(|ui| {
+                            ui.columns(self.config.actions.len(), |columns| {
+                                for (i, action) in self.config.actions.iter().enumerate() {
+                                    if columns[i].small_button(action.button_text()).clicked() {
+                                        self.is_loading = true;
+                                        self.loading_start_time = std::time::Instant::now();
+                                        self.current_action_label = action.label.clone();
+                                        action.trigger(
+                                            &self.clipboard_text,
+                                            self.action_response_tx.clone(),
+                                        );
+                                    }
+                                }
+                            });
+                        });
                     }
                 });
             });
