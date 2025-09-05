@@ -38,6 +38,8 @@ export OPENAI_API_KEY=...
 clipbud -c /path/to/config.yml
 ```
 
+For a list of all supported LLM providers [refer to this page](https://docs.rig.rs/docs/integrations/model_providers).
+
 An example configuration file:
 
 ```yaml
