@@ -20,7 +20,7 @@ pub(crate) struct UI {
     clipboard_rx: mpsc::Receiver<clipboard::Event>,
     action_response_rx: mpsc::Receiver<String>,
     action_response_tx: mpsc::Sender<String>,
-    tray_icon: TrayIcon,
+    _tray_icon: TrayIcon,
     quit_menu_item: MenuItem,
 }
 
@@ -46,7 +46,7 @@ impl UI {
             &quit_menu_item,
         ])?;
 
-        let tray_icon = TrayIconBuilder::new()
+        let _tray_icon = TrayIconBuilder::new()
             .with_menu(Box::new(tray_menu))
             .with_tooltip("Clipboard Buddy")
             .with_title("📋")
@@ -62,7 +62,7 @@ impl UI {
             action_response_tx,
             config,
             quit_menu_item,
-            tray_icon,
+            _tray_icon,
         })
     }
 
@@ -75,7 +75,7 @@ impl UI {
         }
     }
 
-    fn handle_action_response(&mut self, ctx: &egui::Context) {
+    fn handle_action_response(&mut self, _ctx: &egui::Context) {
         if let Ok(response) = self.action_response_rx.try_recv() {
             self.clipboard_text = response.clone();
             if let Err(e) = clipboard::set_clipboard_text(response) {
