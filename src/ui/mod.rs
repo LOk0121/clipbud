@@ -3,8 +3,8 @@ use global_hotkey::{GlobalHotKeyEvent, GlobalHotKeyManager, hotkey::HotKey};
 use mouse_position::mouse_position::Mouse;
 use std::{str::FromStr, sync::mpsc};
 use tray_icon::{
-    TrayIcon, TrayIconBuilder,
-    menu::{AboutMetadata, Menu, MenuEvent, MenuItem, PredefinedMenuItem},
+    TrayIcon,
+    menu::{MenuEvent, MenuItem},
 };
 
 use crate::clipboard;
@@ -115,10 +115,10 @@ impl UI {
     }
 
     fn handle_menu_event(&mut self) {
-        if let Ok(event) = MenuEvent::receiver().try_recv() {
-            if event.id == self.quit_menu_item.id() {
-                std::process::exit(0)
-            }
+        if let Ok(event) = MenuEvent::receiver().try_recv()
+            && event.id == self.quit_menu_item.id()
+        {
+            std::process::exit(0)
         }
     }
 
