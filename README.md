@@ -41,7 +41,7 @@ An example configuration file:
 hotkey: "CMD+CTRL+C"
 
 actions:
-  - label: "Typos"
+  - label: "Fix"
     prompt: "Fix typos and grammar of the following text, but keep the original meaning and structure, only return the fixed text and nothing else:"
     key: "T" # optional shortcut key
     model: "gpt-4o"

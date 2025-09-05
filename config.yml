@@ -1,7 +1,7 @@
 hotkey: "CMD+CTRL+C"
 
 actions:
-  - label: "Typos"
+  - label: "Fix"
     prompt: "Fix typos and grammar of the following text, but keep the original meaning and structure, only return the fixed text and nothing else:"
     key: "T"
     model: "gpt-4o"
@@ -13,8 +13,8 @@ actions:
     model: "gpt-4o"
     provider: "openai"
 
-  - label: "Friendly"
-    prompt: "Make the following text more friendly, only return the friendly text and nothing else:"
+  - label: "Formal"
+    prompt: "Make the following text more formal, only return the formal text and nothing else:"
     key: "F"
     model: "gpt-4o"
     provider: "openai"
