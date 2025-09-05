@@ -35,6 +35,14 @@ impl Action {
         })
     }
 
+    pub fn button_text(&self) -> String {
+        if self.key.is_empty() {
+            self.label.clone()
+        } else {
+            format!("[{}] {}", self.key, self.label)
+        }
+    }
+
     pub fn trigger(&self, clipboard_text: &str, action_response_tx: mpsc::Sender<String>) {
         let prompt = self.prompt.clone() + "\n\n" + clipboard_text;
         let agent = self.agent.clone();

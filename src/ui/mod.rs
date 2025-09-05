@@ -1,4 +1,5 @@
 use eframe::egui;
+use mouse_position::mouse_position::Mouse;
 use std::sync::mpsc;
 use tray_icon::{
     TrayIcon, TrayIconBuilder,
@@ -15,6 +16,7 @@ pub(crate) struct UI {
     clipboard_text: String,
     window_visible: bool,
     window_size: egui::Vec2,
+    window_position: egui::Pos2,
     config: Config,
 
     clipboard_rx: mpsc::Receiver<clipboard::Event>,
@@ -26,9 +28,11 @@ pub(crate) struct UI {
 
 impl UI {
     fn new(clipboard_rx: mpsc::Receiver<clipboard::Event>, config: Config) -> anyhow::Result<Self> {
-        let tray_menu = Menu::new();
+        let (action_response_tx, action_response_rx) = mpsc::channel();
 
+        let tray_menu = Menu::new();
         let quit_menu_item = MenuItem::new("Quit", true, None);
+
         tray_menu.append_items(&[
             &MenuItem::new("Clipboard Buddy", false, None),
             &PredefinedMenuItem::separator(),
@@ -52,11 +56,11 @@ impl UI {
             .with_title("📋")
             .build()?;
 
-        let (action_response_tx, action_response_rx) = mpsc::channel();
         Ok(Self {
             clipboard_text: String::new(),
             window_visible: false,
             window_size: egui::vec2(400.0, 200.0),
+            window_position: egui::pos2(-2000.0, -2000.0),
             clipboard_rx,
             action_response_rx,
             action_response_tx,
@@ -66,7 +70,7 @@ impl UI {
         })
     }
 
-    fn handle_clipboard_data_change(&mut self, ctx: &egui::Context) {
+    fn show_on_clibboard_change(&mut self, ctx: &egui::Context) {
         if let Ok(event) = self.clipboard_rx.try_recv() {
             if event.text != self.clipboard_text {
                 self.clipboard_text = event.text;
@@ -75,7 +79,7 @@ impl UI {
         }
     }
 
-    fn handle_action_response(&mut self, _ctx: &egui::Context) {
+    fn update_on_action_response(&mut self, _ctx: &egui::Context) {
         if let Ok(response) = self.action_response_rx.try_recv() {
             self.clipboard_text = response.clone();
             if let Err(e) = clipboard::set_clipboard_text(response) {
@@ -120,10 +124,11 @@ impl UI {
         }
          */
 
+        // store the window position for mouse boundary checking
+        self.window_position = egui::pos2(window_x, window_y);
+
         // position and resize the window at mouse cursor (with small offset)
-        ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(egui::pos2(
-            window_x, window_y,
-        )));
+        ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(self.window_position));
         ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(self.window_size));
         ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
 
@@ -133,29 +138,54 @@ impl UI {
     fn hide_window(&mut self, ctx: &egui::Context) {
         // move window off-screen when hidden
         self.window_visible = false;
-        ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(egui::pos2(
-            -2000.0, -2000.0,
-        )));
+        self.window_position = egui::pos2(-2000.0, -2000.0);
+        ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(self.window_position));
     }
 
-    fn handle_esc_key(&mut self, ctx: &egui::Context) {
+    fn hide_if_esc_pressed(&mut self, ctx: &egui::Context) {
         // handle escape key to hide window
         if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
             self.hide_window(ctx);
         }
     }
 
-    fn handle_action_key(&mut self, ctx: &egui::Context) {
+    fn hide_if_mouse_outside_window(&mut self, ctx: &egui::Context) {
+        if !self.window_visible {
+            return;
+        }
+
+        if let Mouse::Position { x, y } = Mouse::get_mouse_position() {
+            let mouse_x = x as f32;
+            let mouse_y = y as f32;
+
+            // calculate window bounds
+            let window_rect = egui::Rect::from_min_size(self.window_position, self.window_size);
+
+            // add some margin to prevent accidental hiding when moving cursor to edges
+            let margin = 20.0;
+            let expanded_rect = window_rect.expand(margin);
+
+            // check if mouse is outside the expanded window bounds
+            let mouse_pos = egui::pos2(mouse_x, mouse_y);
+            if !expanded_rect.contains(mouse_pos) {
+                self.hide_window(ctx);
+            }
+        }
+    }
+
+    fn trigger_action_on_keypress(&mut self, ctx: &egui::Context) {
         // check for action key presses
         for action in self.config.actions.iter() {
-            if ctx.input(|i| i.key_pressed(egui::Key::from_name(&action.key).unwrap())) {
+            if !action.key.is_empty()
+                && ctx.input(|i| i.key_pressed(egui::Key::from_name(&action.key).unwrap()))
+            {
                 action.trigger(&self.clipboard_text, self.action_response_tx.clone());
                 break;
             }
         }
     }
 
-    fn render_window(&mut self, ctx: &egui::Context) {
+    fn render(&mut self, ctx: &egui::Context) {
         if self.window_visible {
             egui::CentralPanel::default().show(ctx, |ui| {
                 let style = ui.style_mut();
@@ -181,10 +211,7 @@ impl UI {
                     ui.separator();
 
                     for action in self.config.actions.iter() {
-                        if ui
-                            .button(format!("[{}] {}", action.key, action.label))
-                            .clicked()
-                        {
+                        if ui.button(action.button_text()).clicked() {
                             action.trigger(&self.clipboard_text, self.action_response_tx.clone());
                         }
                     }
@@ -200,15 +227,16 @@ impl UI {
 impl eframe::App for UI {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.handle_menu_event();
-        self.handle_clipboard_data_change(ctx);
-        self.handle_esc_key(ctx);
-        self.handle_action_key(ctx);
-        self.handle_action_response(ctx);
+        self.show_on_clibboard_change(ctx);
+        self.hide_if_esc_pressed(ctx);
+        self.trigger_action_on_keypress(ctx);
+        self.update_on_action_response(ctx);
+        self.hide_if_mouse_outside_window(ctx);
 
         // always request repaint to ensure we process channel messages
         ctx.request_repaint();
 
-        self.render_window(ctx);
+        self.render(ctx);
     }
 }
 
