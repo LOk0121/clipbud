@@ -9,6 +9,7 @@ use serde::Deserialize;
 
 #[derive(Deserialize)]
 pub(crate) struct Config {
+    pub hotkey: Option<String>,
     pub actions: Vec<Action>,
 }
 
@@ -64,6 +65,7 @@ impl Action {
             let prompt = self.prompt.clone() + "\n\n" + clipboard_text;
             let agent = agent.clone();
             std::thread::spawn(move || {
+                // ugly hack to call async code from a sync context
                 let response = tokio::runtime::Builder::new_multi_thread()
                     .enable_all()
                     .build()

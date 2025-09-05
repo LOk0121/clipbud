@@ -1,6 +1,7 @@
 use eframe::egui;
+use global_hotkey::{GlobalHotKeyEvent, GlobalHotKeyManager, hotkey::HotKey};
 use mouse_position::mouse_position::Mouse;
-use std::sync::mpsc;
+use std::{str::FromStr, sync::mpsc};
 use tray_icon::{
     TrayIcon, TrayIconBuilder,
     menu::{AboutMetadata, Menu, MenuEvent, MenuItem, PredefinedMenuItem},
@@ -10,6 +11,7 @@ use crate::clipboard;
 
 use crate::ai::Config;
 
+mod tray;
 pub(crate) struct UI {
     clipboard_text: String,
     window_visible: bool,
@@ -27,37 +29,26 @@ pub(crate) struct UI {
     action_response_tx: mpsc::Sender<String>,
     _tray_icon: TrayIcon,
     quit_menu_item: MenuItem,
+    last_event: Option<clipboard::Event>,
+    _hotkey_manager: Option<GlobalHotKeyManager>,
 }
 
 impl UI {
     fn new(clipboard_rx: mpsc::Receiver<clipboard::Event>, config: Config) -> anyhow::Result<Self> {
         let (action_response_tx, action_response_rx) = mpsc::channel();
 
-        let tray_menu = Menu::new();
-        let quit_menu_item = MenuItem::new("Quit", true, None);
+        let (_tray_icon, quit_menu_item) = tray::build_tray_menu_icon()?;
 
-        tray_menu.append_items(&[
-            &MenuItem::new("Clipboard Buddy", false, None),
-            &PredefinedMenuItem::separator(),
-            &PredefinedMenuItem::about(
-                None,
-                Some(AboutMetadata {
-                    name: Some("Clipboard Buddy".to_string()),
-                    copyright: Some(
-                        "Copyright Simone 'evilsocket' Margaritelli @ 2025".to_string(),
-                    ),
-                    ..Default::default()
-                }),
-            ),
-            &PredefinedMenuItem::separator(),
-            &quit_menu_item,
-        ])?;
-
-        let _tray_icon = TrayIconBuilder::new()
-            .with_menu(Box::new(tray_menu))
-            .with_tooltip("Clipboard Buddy")
-            .with_title("📋")
-            .build()?;
+        let mut _hotkey_manager = None;
+        if let Some(hotkey) = config.hotkey.as_ref() {
+            let manager = GlobalHotKeyManager::new()?;
+            let hotkey = HotKey::from_str(hotkey)?;
+            println!("registering for hotkey: {}", hotkey);
+            manager.register(hotkey)?;
+            _hotkey_manager = Some(manager);
+        } else {
+            println!("registering for clipboard change")
+        }
 
         Ok(Self {
             clipboard_text: String::new(),
@@ -73,15 +64,40 @@ impl UI {
             action_response_tx,
             quit_menu_item,
             _tray_icon,
+            _hotkey_manager,
+            last_event: None,
         })
     }
 
-    fn show_on_clibboard_change(&mut self, ctx: &egui::Context) {
+    fn show_on_clibboard_change_or_hotkey(&mut self, ctx: &egui::Context) {
+        let mut do_show = false;
+
+        // update clipboard text
         if let Ok(event) = self.clipboard_rx.try_recv() {
-            if event.text != self.clipboard_text {
-                self.clipboard_text = event.text;
-                self.show_window(ctx, event.mouse_x, event.mouse_y);
+            self.clipboard_text = event.text.clone();
+            self.last_event = Some(event);
+            // if no hotkey is set, show window
+            if self.config.hotkey.is_none() {
+                do_show = true;
             }
+        }
+
+        // check for hotkey press if configured
+        if self.config.hotkey.is_some()
+            && let Ok(_) = GlobalHotKeyEvent::receiver().try_recv()
+        {
+            do_show = true;
+        }
+
+        // show window if needed at the last clipboard change mouse position
+        if do_show {
+            let mut x = 0.0;
+            let mut y = 0.0;
+            if let Some(event) = self.last_event.as_ref() {
+                x = event.mouse_x;
+                y = event.mouse_y;
+            }
+            self.show_window(ctx, x, y);
         }
     }
 
@@ -265,7 +281,7 @@ impl UI {
                     } else {
                         // Normal state - buttons are interactive
                         for action in self.config.actions.iter() {
-                            if ui.button(action.button_text()).clicked() {
+                            if ui.small_button(action.button_text()).clicked() {
                                 self.is_loading = true;
                                 self.loading_start_time = std::time::Instant::now();
                                 self.current_action_label = action.label.clone();
@@ -274,9 +290,6 @@ impl UI {
                             }
                         }
                     }
-
-                    ui.separator();
-                    ui.small("[ESC] Hide");
                 });
             });
         }
@@ -286,7 +299,7 @@ impl UI {
 impl eframe::App for UI {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.handle_menu_event();
-        self.show_on_clibboard_change(ctx);
+        self.show_on_clibboard_change_or_hotkey(ctx);
         self.hide_if_esc_pressed(ctx);
         self.trigger_action_on_keypress(ctx);
         self.update_on_action_response(ctx);

@@ -1,3 +1,5 @@
+hotkey: "CMD+CTRL+C"
+
 actions:
   - label: "Fix typos and grammar"
     prompt: "Fix typos and grammar of the following text, only return the fixed text and nothing else:"
@@ -14,5 +16,11 @@ actions:
   - label: "Make Friendly"
     prompt: "Make the following text more friendly, only return the friendly text and nothing else:"
     key: "F"
+    model: "gpt-4o"
+    provider: "openai"
+
+  - label: "ELI5"
+    prompt: "Explain the following text in a way that is easy to understand for a 5 year old, only return the explanation and nothing else:"
+    key: "E"
     model: "gpt-4o"
     provider: "openai"
