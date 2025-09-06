@@ -20,21 +20,40 @@ fn main() -> anyhow::Result<()> {
     let user_path = config::Config::default_path();
     if !user_path.exists() {
         std::fs::create_dir_all(&user_path)?;
-        // TODO: copy default config file
     }
 
+    let default_config = config::Config::default_path().join("config.yml");
+    if !default_config.exists() {
+        println!(
+            "creating default config file at {}",
+            default_config.to_str().unwrap()
+        );
+        let default_data = include_str!("config/default.yml");
+        std::fs::write(&default_config, default_data)?;
+    }
+
+    // make sure we're the only instance running
     let instance = SingleInstance::new(Config::default_lock_file().to_str().unwrap())?;
     if !instance.is_single() {
         println!("clipbud is already running, exiting...");
         return Ok(());
     }
 
+    // load config
     let args = Arguments::parse();
     let config = config::Config::from_file(
         &args
             .config
-            .unwrap_or(user_path.join("config.yaml").to_str().unwrap().to_string()),
+            .unwrap_or(default_config.to_str().unwrap().to_string()),
     )?;
+
+    // set environment variables if defined in the config file
+    for (key, value) in config.keys.iter() {
+        println!("setting environment variable {}", key);
+        unsafe {
+            std::env::set_var(key, value);
+        }
+    }
 
     let (event_tx, event_rx) = mpsc::channel();
 

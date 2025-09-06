@@ -1,4 +1,4 @@
-use std::{path::PathBuf, sync::mpsc};
+use std::{collections::HashMap, path::PathBuf, sync::mpsc};
 
 use rig::{
     agent::Agent,
@@ -12,6 +12,8 @@ pub(crate) struct Config {
     pub theme: Option<String>,
     pub hotkey: Option<String>,
     pub actions: Vec<Action>,
+    #[serde(default = "HashMap::new")]
+    pub keys: HashMap<String, String>,
 }
 
 impl Config {

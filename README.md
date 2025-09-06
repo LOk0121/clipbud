@@ -32,10 +32,13 @@ cargo install clipbud
 
 This will compile its sources and install the binary in `$HOME/.cargo/bin/clipbud`. You are now ready to go! 🚀
 
+
 ```bash
+# you can also set this via config file
 export OPENAI_API_KEY=...
 
-clipbud -c /path/to/config.yml
+# default configuration loaded from ~/.clipbud/config.yml
+clipbud
 ```
 
 An example configuration file can be found in [config.yml](https://github.com/evilsocket/clipbud/blob/main/config.yml). 
