@@ -7,8 +7,8 @@ use tray_icon::{
     menu::{MenuEvent, MenuItem},
 };
 
-use crate::clipboard;
 use crate::config::Config;
+use crate::{clipboard, config};
 
 mod tray;
 pub(crate) struct UI {
@@ -24,12 +24,13 @@ pub(crate) struct UI {
     loading_start_time: std::time::Instant,
     current_action_label: String,
 
-    // Modal state
-    show_empty_clipboard_modal: bool,
+    // modal state
+    show_error_modal: bool,
+    error_message: String,
 
     clipboard_rx: mpsc::Receiver<clipboard::Event>,
-    action_response_rx: mpsc::Receiver<String>,
-    action_response_tx: mpsc::Sender<String>,
+    action_response_rx: mpsc::Receiver<config::ActionEvent>,
+    action_response_tx: mpsc::Sender<config::ActionEvent>,
     _tray_icon: TrayIcon,
     configure_menu_item: MenuItem,
     quit_menu_item: MenuItem,
@@ -75,7 +76,8 @@ impl UI {
             is_loading: false,
             loading_start_time: std::time::Instant::now(),
             current_action_label: String::new(),
-            show_empty_clipboard_modal: false,
+            show_error_modal: false,
+            error_message: String::new(),
             clipboard_rx,
             action_response_rx,
             action_response_tx,
@@ -118,14 +120,22 @@ impl UI {
 
     fn update_on_action_response(&mut self, _ctx: &egui::Context) {
         if let Ok(response) = self.action_response_rx.try_recv() {
-            self.clipboard_text = Some(response.clone());
-            if let Err(e) = clipboard::set_clipboard_text(response) {
-                eprintln!("failed to set clipboard text: {}", e);
-            }
-            // Stop loading when response is received
+            // stop loading when response is received
             self.is_loading = false;
             self.current_action_label.clear();
-            // self.hide_window(ctx);
+
+            match response {
+                config::ActionEvent::Response(response) => {
+                    self.clipboard_text = Some(response.clone());
+                    if let Err(e) = clipboard::set_clipboard_text(response) {
+                        eprintln!("failed to set clipboard text: {}", e);
+                    }
+                }
+                config::ActionEvent::Error(error) => {
+                    self.error_message = format!("❌ {}", error);
+                    self.show_error_modal = true;
+                }
+            }
         }
     }
 
@@ -133,10 +143,11 @@ impl UI {
         if let Ok(event) = MenuEvent::receiver().try_recv() {
             if event.id == self.quit_menu_item.id() {
                 std::process::exit(0)
-            } else if event.id == self.configure_menu_item.id() {
-                if let Err(e) = tray::open_config_folder() {
-                    eprintln!("Failed to open config folder: {}", e);
-                }
+            } else if event.id == self.configure_menu_item.id()
+                && let Err(e) = tray::open_config_folder()
+            {
+                self.error_message = format!("❌ Failed to open config folder: {}", e);
+                self.show_error_modal = true;
             }
         }
     }
@@ -149,6 +160,9 @@ impl UI {
         let window_y = mouse_y + offset;
 
         /*
+
+        TODO: add screen bounds checking
+
         // adjust x position if window would go off right edge
         if window_x + self.window_size.x > screen_rect.max.x {
             window_x = screen_rect.max.x - self.window_size.x - offset;
@@ -184,7 +198,7 @@ impl UI {
             // move window off-screen when hidden
             self.window_visible = false;
             self.window_position = egui::pos2(-2000.0, -2000.0);
-            self.show_empty_clipboard_modal = false;
+            self.show_error_modal = false;
             ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(self.window_position));
             ctx.request_repaint();
         }
@@ -221,28 +235,27 @@ impl UI {
         }
     }
 
-    fn show_empty_clipboard_modal(&mut self, ctx: &egui::Context) {
-        if self.show_empty_clipboard_modal {
+    fn show_error_modal(&mut self, ctx: &egui::Context) {
+        if self.show_error_modal {
             let mut should_close = false;
-            let mut show_modal = self.show_empty_clipboard_modal;
+            let mut show_modal = self.show_error_modal;
 
-            egui::Window::new("No clipboard text found")
+            egui::Window::new("Error")
                 .collapsible(false)
                 .resizable(false)
                 .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
                 .open(&mut show_modal)
                 .show(ctx, |ui| {
-                    ui.vertical_centered(|ui| {
-                        ui.label("❌ No clipboard text found");
-                        ui.add_space(10.0);
-                        if ui.button("OK").clicked() {
-                            should_close = true;
-                        }
-                    });
+                    ui.label(self.error_message.clone());
+                    ui.add_space(10.0);
+                    if ui.button("OK").clicked() {
+                        should_close = true;
+                    }
                 });
 
             if should_close || !show_modal {
-                self.show_empty_clipboard_modal = false;
+                self.show_error_modal = false;
+                self.error_message.clear();
             }
         }
     }
@@ -265,7 +278,8 @@ impl UI {
                     self.current_action_label = action.label.clone();
                     action.trigger(clipboard_text, self.action_response_tx.clone());
                 } else {
-                    self.show_empty_clipboard_modal = true;
+                    self.show_error_modal = true;
+                    self.error_message = "❌ No clipboard text found".to_string();
                 }
                 break;
             }
@@ -351,7 +365,9 @@ impl UI {
                                                 self.action_response_tx.clone(),
                                             );
                                         } else {
-                                            self.show_empty_clipboard_modal = true;
+                                            self.show_error_modal = true;
+                                            self.error_message =
+                                                "❌ No clipboard text found".to_string();
                                         }
                                     }
                                 }
@@ -372,7 +388,7 @@ impl eframe::App for UI {
         self.trigger_action_on_keypress(ctx);
         self.update_on_action_response(ctx);
         self.hide_if_mouse_outside_window(ctx);
-        self.show_empty_clipboard_modal(ctx);
+        self.show_error_modal(ctx);
 
         // always request repaint to ensure we process channel messages
         ctx.request_repaint();

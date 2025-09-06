@@ -1,11 +1,11 @@
-use std::{collections::HashMap, path::PathBuf, sync::mpsc};
+use std::{collections::HashMap, path::PathBuf};
 
-use rig::{
-    agent::Agent,
-    client::{builder::DynClientBuilder, completion::CompletionModelHandle},
-    completion::Prompt,
-};
 use serde::Deserialize;
+
+mod action;
+
+pub(crate) use action::Action;
+pub(crate) use action::Event as ActionEvent;
 
 #[derive(Deserialize)]
 pub(crate) struct Config {
@@ -26,6 +26,14 @@ impl Config {
     }
 
     pub fn compile(&mut self) -> anyhow::Result<()> {
+        // set environment variables if defined in the config file
+        for (key, value) in self.keys.iter() {
+            println!("setting environment variable {}", key);
+            unsafe {
+                std::env::set_var(key, value);
+            }
+        }
+
         for action in self.actions.iter_mut() {
             action.compile()?;
         }
@@ -39,55 +47,5 @@ impl Config {
         let mut config = serde_yaml::from_str::<Self>(&config)?;
         config.compile()?;
         Ok(config)
-    }
-}
-
-#[derive(Deserialize)]
-pub(crate) struct Action {
-    pub label: String,
-    pub prompt: String,
-    pub key: Option<String>,
-    pub model: String,
-    pub provider: String,
-
-    #[serde(skip)]
-    agent: Option<Agent<CompletionModelHandle<'static>>>,
-}
-
-impl Action {
-    pub fn compile(&mut self) -> anyhow::Result<()> {
-        let agent = DynClientBuilder::new()
-            .agent(&self.provider, &self.model)?
-            .build();
-        self.agent = Some(agent);
-        Ok(())
-    }
-
-    pub fn button_text(&self) -> String {
-        if self.key.is_none() {
-            self.label.clone()
-        } else {
-            format!("[{}] {}", self.key.as_ref().unwrap(), self.label)
-        }
-    }
-
-    pub fn trigger(&self, clipboard_text: &str, action_response_tx: mpsc::Sender<String>) {
-        if let Some(agent) = &self.agent {
-            let prompt = self.prompt.clone() + "\n\n" + clipboard_text;
-            let agent = agent.clone();
-            std::thread::spawn(move || {
-                // ugly hack to call async code from a sync context
-                let response = tokio::runtime::Builder::new_multi_thread()
-                    .enable_all()
-                    .build()
-                    .unwrap()
-                    .block_on(async { agent.prompt(prompt).await })
-                    .unwrap();
-
-                action_response_tx.send(response).unwrap();
-            });
-        } else {
-            eprintln!("action not compiled");
-        }
     }
 }

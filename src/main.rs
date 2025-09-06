@@ -47,14 +47,6 @@ fn main() -> anyhow::Result<()> {
             .unwrap_or(default_config.to_str().unwrap().to_string()),
     )?;
 
-    // set environment variables if defined in the config file
-    for (key, value) in config.keys.iter() {
-        println!("setting environment variable {}", key);
-        unsafe {
-            std::env::set_var(key, value);
-        }
-    }
-
     let (event_tx, event_rx) = mpsc::channel();
 
     let shutdown = clipboard::start_observer(event_tx);
