@@ -1,4 +1,4 @@
-use std::sync::mpsc;
+use std::{path::PathBuf, sync::mpsc};
 
 use rig::{
     agent::Agent,
@@ -15,6 +15,14 @@ pub(crate) struct Config {
 }
 
 impl Config {
+    pub fn default_path() -> PathBuf {
+        PathBuf::from(shellexpand::full("~/.clipbud/").unwrap().to_string())
+    }
+
+    pub fn default_lock_file() -> PathBuf {
+        Self::default_path().join(".lock")
+    }
+
     pub fn compile(&mut self) -> anyhow::Result<()> {
         for action in self.actions.iter_mut() {
             action.compile()?;

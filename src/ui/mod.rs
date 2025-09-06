@@ -56,14 +56,13 @@ impl UI {
             println!("registering for clipboard change")
         }
 
-        match config.theme.as_ref() {
-            Some(theme) => match theme.as_str() {
+        if let Some(theme) = config.theme.as_ref() {
+            match theme.as_str() {
                 "dark" => creation_context.egui_ctx.set_theme(egui::Theme::Dark),
                 "light" => creation_context.egui_ctx.set_theme(egui::Theme::Light),
                 "system" => {}
                 _ => return Err(anyhow::anyhow!("invalid theme: {}", theme)),
-            },
-            None => {}
+            }
         }
 
         Ok(Self {
