@@ -17,7 +17,7 @@
 Clipboard Buddy (`clipbud`) is a cross platform utility that interacts with your system clipboard and augments it with AI capabilities. You can register a set of custom action prompts and recall them at any time on your clipboard contents using a custom global hotkey. The power of this mechanism is that it works with any application since it reads and writes directly from and to the system clipboard. Avoid repetitive copy/paste to and from your LLM!
 
 <div align="center">
-  <img alt="Clipboard Buddy Demo" src="https://raw.githubusercontent.com/evilsocket/clipbud/main/assets/clipbud.gif" />
+  <img alt="Clipboard Buddy Demo" src="https://raw.githubusercontent.com/evilsocket/clipbud/main/assets/demo.gif" />
 </div>
 
 ## Quick Start
