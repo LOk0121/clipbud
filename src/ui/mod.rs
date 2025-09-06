@@ -12,15 +12,20 @@ use crate::config::Config;
 
 mod tray;
 pub(crate) struct UI {
-    clipboard_text: String,
+    config: Config,
+
     window_visible: bool,
     window_size: egui::Vec2,
     window_position: egui::Pos2,
-    config: Config,
+
+    clipboard_text: Option<String>,
 
     is_loading: bool,
     loading_start_time: std::time::Instant,
     current_action_label: String,
+
+    // Modal state
+    show_empty_clipboard_modal: bool,
 
     clipboard_rx: mpsc::Receiver<clipboard::Event>,
     action_response_rx: mpsc::Receiver<String>,
@@ -62,7 +67,7 @@ impl UI {
         }
 
         Ok(Self {
-            clipboard_text: String::new(),
+            clipboard_text: None,
             window_visible: false,
             window_size: egui::vec2(400.0, 200.0),
             window_position: egui::pos2(-2000.0, -2000.0),
@@ -70,6 +75,7 @@ impl UI {
             is_loading: false,
             loading_start_time: std::time::Instant::now(),
             current_action_label: String::new(),
+            show_empty_clipboard_modal: false,
             clipboard_rx,
             action_response_rx,
             action_response_tx,
@@ -84,7 +90,7 @@ impl UI {
 
         // update clipboard text
         if let Ok(event) = self.clipboard_rx.try_recv() {
-            self.clipboard_text = event.text.clone();
+            self.clipboard_text = Some(event.text.clone());
             // if no hotkey is set, show window
             if self.config.hotkey.is_none() {
                 do_show = true;
@@ -111,7 +117,7 @@ impl UI {
 
     fn update_on_action_response(&mut self, _ctx: &egui::Context) {
         if let Ok(response) = self.action_response_rx.try_recv() {
-            self.clipboard_text = response.clone();
+            self.clipboard_text = Some(response.clone());
             if let Err(e) = clipboard::set_clipboard_text(response) {
                 eprintln!("failed to set clipboard text: {}", e);
             }
@@ -169,11 +175,14 @@ impl UI {
     }
 
     fn hide_window(&mut self, ctx: &egui::Context) {
-        // move window off-screen when hidden
-        self.window_visible = false;
-        self.window_position = egui::pos2(-2000.0, -2000.0);
-        ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(self.window_position));
-        ctx.request_repaint();
+        if !self.is_loading {
+            // move window off-screen when hidden
+            self.window_visible = false;
+            self.window_position = egui::pos2(-2000.0, -2000.0);
+            self.show_empty_clipboard_modal = false;
+            ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(self.window_position));
+            ctx.request_repaint();
+        }
     }
 
     fn hide_if_esc_pressed(&mut self, ctx: &egui::Context) {
@@ -207,6 +216,32 @@ impl UI {
         }
     }
 
+    fn show_empty_clipboard_modal(&mut self, ctx: &egui::Context) {
+        if self.show_empty_clipboard_modal {
+            let mut should_close = false;
+            let mut show_modal = self.show_empty_clipboard_modal;
+
+            egui::Window::new("No clipboard text found")
+                .collapsible(false)
+                .resizable(false)
+                .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
+                .open(&mut show_modal)
+                .show(ctx, |ui| {
+                    ui.vertical_centered(|ui| {
+                        ui.label("❌ No clipboard text found");
+                        ui.add_space(10.0);
+                        if ui.button("OK").clicked() {
+                            should_close = true;
+                        }
+                    });
+                });
+
+            if should_close || !show_modal {
+                self.show_empty_clipboard_modal = false;
+            }
+        }
+    }
+
     fn trigger_action_on_keypress(&mut self, ctx: &egui::Context) {
         if self.is_loading {
             return;
@@ -219,10 +254,14 @@ impl UI {
                     i.key_pressed(egui::Key::from_name(action.key.as_ref().unwrap()).unwrap())
                 })
             {
-                self.is_loading = true;
-                self.loading_start_time = std::time::Instant::now();
-                self.current_action_label = action.label.clone();
-                action.trigger(&self.clipboard_text, self.action_response_tx.clone());
+                if let Some(clipboard_text) = self.clipboard_text.as_ref() {
+                    self.is_loading = true;
+                    self.loading_start_time = std::time::Instant::now();
+                    self.current_action_label = action.label.clone();
+                    action.trigger(clipboard_text, self.action_response_tx.clone());
+                } else {
+                    self.show_empty_clipboard_modal = true;
+                }
                 break;
             }
         }
@@ -266,11 +305,17 @@ impl UI {
                     ui.label("📋 Clipboard Buddy");
                     ui.separator();
 
+                    let mut clipboard_text = if let Some(text) = self.clipboard_text.as_ref() {
+                        text.clone()
+                    } else {
+                        "❌ No clipboard text found.".to_string()
+                    };
+
                     egui::ScrollArea::vertical()
                         .max_height(70.0)
                         .show(ui, |ui| {
                             ui.add(
-                                egui::TextEdit::multiline(&mut self.clipboard_text.as_str())
+                                egui::TextEdit::multiline(&mut clipboard_text)
                                     .desired_width(350.0)
                                     .interactive(false)
                                     .font(egui::TextStyle::Monospace),
@@ -292,13 +337,17 @@ impl UI {
                             ui.columns(self.config.actions.len(), |columns| {
                                 for (i, action) in self.config.actions.iter().enumerate() {
                                     if columns[i].small_button(action.button_text()).clicked() {
-                                        self.is_loading = true;
-                                        self.loading_start_time = std::time::Instant::now();
-                                        self.current_action_label = action.label.clone();
-                                        action.trigger(
-                                            &self.clipboard_text,
-                                            self.action_response_tx.clone(),
-                                        );
+                                        if let Some(clipboard_text) = self.clipboard_text.as_ref() {
+                                            self.is_loading = true;
+                                            self.loading_start_time = std::time::Instant::now();
+                                            self.current_action_label = action.label.clone();
+                                            action.trigger(
+                                                clipboard_text,
+                                                self.action_response_tx.clone(),
+                                            );
+                                        } else {
+                                            self.show_empty_clipboard_modal = true;
+                                        }
                                     }
                                 }
                             });
@@ -318,6 +367,7 @@ impl eframe::App for UI {
         self.trigger_action_on_keypress(ctx);
         self.update_on_action_response(ctx);
         self.hide_if_mouse_outside_window(ctx);
+        self.show_empty_clipboard_modal(ctx);
 
         // always request repaint to ensure we process channel messages
         ctx.request_repaint();
