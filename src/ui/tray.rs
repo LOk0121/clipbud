@@ -6,6 +6,35 @@ use tray_icon::{
     menu::{AboutMetadata, Menu, MenuItem, PredefinedMenuItem},
 };
 
+use crate::config::Config;
+
+pub(crate) fn open_config_folder() -> anyhow::Result<()> {
+    let config_path = Config::default_path();
+
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(&config_path)
+            .spawn()?;
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("explorer.exe")
+            .arg(&config_path)
+            .spawn()?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(&config_path)
+            .spawn()?;
+    }
+
+    Ok(())
+}
+
 fn load_icons() -> (tray_icon::Icon, tray_icon::menu::Icon) {
     let (icon_rgba, icon_width, icon_height) = {
         let bytes = include_bytes!("../../assets/icon-256.png");
@@ -25,13 +54,16 @@ fn load_icons() -> (tray_icon::Icon, tray_icon::menu::Icon) {
     )
 }
 
-pub(crate) fn build_tray_menu_icon() -> anyhow::Result<(TrayIcon, MenuItem)> {
+pub(crate) fn build_tray_menu_icon() -> anyhow::Result<(TrayIcon, MenuItem, MenuItem)> {
     let tray_menu = Menu::new();
+    let configure_menu_item = MenuItem::new("Configure", true, None);
     let quit_menu_item = MenuItem::new("Quit", true, None);
     let (icon, menu_icon) = load_icons();
 
     tray_menu.append_items(&[
         &MenuItem::new("Clipboard Buddy", false, None),
+        &PredefinedMenuItem::separator(),
+        &configure_menu_item,
         &PredefinedMenuItem::separator(),
         &PredefinedMenuItem::about(
             None,
@@ -40,10 +72,10 @@ pub(crate) fn build_tray_menu_icon() -> anyhow::Result<(TrayIcon, MenuItem)> {
                 icon: Some(menu_icon),
                 version: Some(env!("CARGO_PKG_VERSION").to_string()),
                 copyright: Some("Copyright Simone 'evilsocket' Margaritelli @ 2025".to_string()),
+                website: Some("https://github.com/evilsocket/clipbud".to_string()),
                 ..Default::default()
             }),
         ),
-        &PredefinedMenuItem::separator(),
         &quit_menu_item,
     ])?;
 
@@ -54,5 +86,5 @@ pub(crate) fn build_tray_menu_icon() -> anyhow::Result<(TrayIcon, MenuItem)> {
         .with_icon(icon)
         .build()?;
 
-    Ok((tray_icon, quit_menu_item))
+    Ok((tray_icon, configure_menu_item, quit_menu_item))
 }

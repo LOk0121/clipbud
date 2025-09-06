@@ -31,6 +31,7 @@ pub(crate) struct UI {
     action_response_rx: mpsc::Receiver<String>,
     action_response_tx: mpsc::Sender<String>,
     _tray_icon: TrayIcon,
+    configure_menu_item: MenuItem,
     quit_menu_item: MenuItem,
     _hotkey_manager: Option<GlobalHotKeyManager>,
 }
@@ -43,7 +44,7 @@ impl UI {
     ) -> anyhow::Result<Self> {
         let (action_response_tx, action_response_rx) = mpsc::channel();
 
-        let (_tray_icon, quit_menu_item) = tray::build_tray_menu_icon()?;
+        let (_tray_icon, configure_menu_item, quit_menu_item) = tray::build_tray_menu_icon()?;
 
         let mut _hotkey_manager = None;
         if let Some(hotkey) = config.hotkey.as_ref() {
@@ -78,6 +79,7 @@ impl UI {
             clipboard_rx,
             action_response_rx,
             action_response_tx,
+            configure_menu_item,
             quit_menu_item,
             _tray_icon,
             _hotkey_manager,
@@ -128,10 +130,14 @@ impl UI {
     }
 
     fn handle_menu_event(&mut self) {
-        if let Ok(event) = MenuEvent::receiver().try_recv()
-            && event.id == self.quit_menu_item.id()
-        {
-            std::process::exit(0)
+        if let Ok(event) = MenuEvent::receiver().try_recv() {
+            if event.id == self.quit_menu_item.id() {
+                std::process::exit(0)
+            } else if event.id == self.configure_menu_item.id() {
+                if let Err(e) = tray::open_config_folder() {
+                    eprintln!("Failed to open config folder: {}", e);
+                }
+            }
         }
     }
 
