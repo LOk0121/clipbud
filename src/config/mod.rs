@@ -9,6 +9,7 @@ use serde::Deserialize;
 
 #[derive(Deserialize)]
 pub(crate) struct Config {
+    pub theme: Option<String>,
     pub hotkey: Option<String>,
     pub actions: Vec<Action>,
 }

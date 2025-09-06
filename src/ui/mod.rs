@@ -1,4 +1,5 @@
 use eframe::egui;
+use egui::{Style, Visuals};
 use global_hotkey::{GlobalHotKeyEvent, GlobalHotKeyManager, hotkey::HotKey};
 use mouse_position::mouse_position::Mouse;
 use std::{str::FromStr, sync::mpsc};
@@ -8,8 +9,7 @@ use tray_icon::{
 };
 
 use crate::clipboard;
-
-use crate::ai::Config;
+use crate::config::Config;
 
 mod tray;
 pub(crate) struct UI {
@@ -19,7 +19,6 @@ pub(crate) struct UI {
     window_position: egui::Pos2,
     config: Config,
 
-    // Loading state for actions
     is_loading: bool,
     loading_start_time: std::time::Instant,
     current_action_label: String,
@@ -34,7 +33,11 @@ pub(crate) struct UI {
 }
 
 impl UI {
-    fn new(clipboard_rx: mpsc::Receiver<clipboard::Event>, config: Config) -> anyhow::Result<Self> {
+    fn new(
+        creation_context: &eframe::CreationContext<'_>,
+        clipboard_rx: mpsc::Receiver<clipboard::Event>,
+        config: Config,
+    ) -> anyhow::Result<Self> {
         let (action_response_tx, action_response_rx) = mpsc::channel();
 
         let (_tray_icon, quit_menu_item) = tray::build_tray_menu_icon()?;
@@ -48,6 +51,16 @@ impl UI {
             _hotkey_manager = Some(manager);
         } else {
             println!("registering for clipboard change")
+        }
+
+        match config.theme.as_ref() {
+            Some(theme) => match theme.as_str() {
+                "dark" => creation_context.egui_ctx.set_theme(egui::Theme::Dark),
+                "light" => creation_context.egui_ctx.set_theme(egui::Theme::Light),
+                "system" => {}
+                _ => return Err(anyhow::anyhow!("invalid theme: {}", theme)),
+            },
+            None => {}
         }
 
         Ok(Self {
@@ -332,9 +345,11 @@ pub fn run(event_rx: mpsc::Receiver<clipboard::Event>, config: Config) -> anyhow
         ..Default::default()
     };
 
-    let ui = UI::new(event_rx, config)?;
-    if let Err(e) = eframe::run_native("Clipboard Buddy", options, Box::new(|_cc| Ok(Box::new(ui))))
-    {
+    if let Err(e) = eframe::run_native(
+        "Clipboard Buddy",
+        options,
+        Box::new(|cc| Ok(Box::new(UI::new(cc, event_rx, config)?))),
+    ) {
         Err(anyhow::anyhow!("eframe::run_native error: {}", e))
     } else {
         Ok(())

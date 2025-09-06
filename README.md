@@ -38,39 +38,8 @@ export OPENAI_API_KEY=...
 clipbud -c /path/to/config.yml
 ```
 
+An example configuration file can be found in [config.yml](https://github.com/evilsocket/clipbud/blob/main/config.yml). 
 For a list of all supported LLM providers [refer to this page](https://docs.rig.rs/docs/integrations/model_providers).
-
-An example configuration file:
-
-```yaml
-# if this is not set, clipbud will show itself at every clipboard change
-hotkey: "CMD+CTRL+C"
-
-actions:
-  - label: "Fix"
-    prompt: "Fix typos and grammar of the following text, but keep the original meaning and structure, only return the fixed text and nothing else:"
-    key: "T" # optional shortcut key
-    model: "gpt-4o"
-    provider: "openai"
-
-  - label: "Summarize"
-    prompt: "Summarize the following text in less than 200 words, only return the summary and nothing else:"
-    key: "S"
-    model: "gpt-4o"
-    provider: "openai"
-
-  - label: "Friendly"
-    prompt: "Make the following text more friendly, only return the friendly text and nothing else:"
-    key: "F"
-    model: "gpt-4o"
-    provider: "openai"
-
-  - label: "ELI5"
-    prompt: "Explain the following text in a way that is easy to understand for a 5 year old, only return the explanation and nothing else:"
-    key: "E"
-    model: "gpt-4o"
-    provider: "openai"
-```
 
 ## Contributors
 

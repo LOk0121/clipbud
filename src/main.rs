@@ -2,8 +2,8 @@ use std::sync::mpsc;
 
 use clap::Parser;
 
-mod ai;
 mod clipboard;
+mod config;
 mod ui;
 
 #[derive(Debug, Parser)]
@@ -14,7 +14,7 @@ struct Arguments {
 
 fn main() -> anyhow::Result<()> {
     let args = Arguments::parse();
-    let config = ai::Config::from_file(&args.config)?;
+    let config = config::Config::from_file(&args.config)?;
 
     let (event_tx, event_rx) = mpsc::channel();
 
