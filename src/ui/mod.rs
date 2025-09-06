@@ -302,7 +302,7 @@ impl UI {
                 style.spacing.window_margin = egui::Margin::same(12.0);
 
                 ui.vertical(|ui| {
-                    ui.label("📋 Clipboard Buddy");
+                    ui.label(format!("📋 Clipboard Buddy v{}", env!("CARGO_PKG_VERSION")));
                     ui.separator();
 
                     let mut clipboard_text = if let Some(text) = self.clipboard_text.as_ref() {
@@ -314,9 +314,9 @@ impl UI {
                     egui::ScrollArea::vertical()
                         .max_height(70.0)
                         .show(ui, |ui| {
-                            ui.add(
+                            ui.add_sized(
+                                ui.available_size(),
                                 egui::TextEdit::multiline(&mut clipboard_text)
-                                    .desired_width(350.0)
                                     .interactive(false)
                                     .font(egui::TextStyle::Monospace),
                             );
