@@ -1,5 +1,4 @@
 use eframe::egui;
-use egui::{Style, Visuals};
 use global_hotkey::{GlobalHotKeyEvent, GlobalHotKeyManager, hotkey::HotKey};
 use mouse_position::mouse_position::Mouse;
 use std::{str::FromStr, sync::mpsc};
@@ -28,7 +27,6 @@ pub(crate) struct UI {
     action_response_tx: mpsc::Sender<String>,
     _tray_icon: TrayIcon,
     quit_menu_item: MenuItem,
-    last_event: Option<clipboard::Event>,
     _hotkey_manager: Option<GlobalHotKeyManager>,
 }
 
@@ -78,7 +76,6 @@ impl UI {
             quit_menu_item,
             _tray_icon,
             _hotkey_manager,
-            last_event: None,
         })
     }
 
@@ -88,7 +85,6 @@ impl UI {
         // update clipboard text
         if let Ok(event) = self.clipboard_rx.try_recv() {
             self.clipboard_text = event.text.clone();
-            self.last_event = Some(event);
             // if no hotkey is set, show window
             if self.config.hotkey.is_none() {
                 do_show = true;
@@ -104,12 +100,11 @@ impl UI {
 
         // show window if needed at the last clipboard change mouse position
         if do_show {
-            let mut x = 0.0;
-            let mut y = 0.0;
-            if let Some(event) = self.last_event.as_ref() {
-                x = event.mouse_x;
-                y = event.mouse_y;
-            }
+            // get current mouse position
+            let (x, y) = match Mouse::get_mouse_position() {
+                Mouse::Position { x, y } => (x as f32, y as f32),
+                _ => (0.0, 0.0),
+            };
             self.show_window(ctx, x, y);
         }
     }
