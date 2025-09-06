@@ -380,12 +380,23 @@ pub fn run(event_rx: mpsc::Receiver<clipboard::Event>, config: Config) -> anyhow
         viewport: egui::ViewportBuilder::default()
             .with_title("Clipboard Buddy")
             .with_inner_size([400.0, 200.0])
-            .with_position([-2000.0, -2000.0]) // Start off-screen
-            .with_decorations(false) // Borderless window
-            .with_transparent(false) // Disable transparency for better visibility
-            .with_always_on_top() // Always on top
-            .with_resizable(false) // Fixed size
-            .with_visible(true), // Must be visible (we control visibility via position)
+            // start off-screen
+            .with_position([-2000.0, -2000.0])
+            // borderless window
+            .with_decorations(false)
+            // disable transparency for better visibility
+            .with_transparent(false)
+            // always on top
+            .with_always_on_top()
+            // fixed size
+            .with_resizable(false)
+            // must be visible (we control visibility via position)
+            .with_visible(true)
+            // add icon
+            .with_icon(
+                eframe::icon_data::from_png_bytes(&include_bytes!("../../assets/icon-256.png")[..])
+                    .unwrap(),
+            ),
         ..Default::default()
     };
 
