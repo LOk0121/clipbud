@@ -26,6 +26,9 @@ fn main() -> anyhow::Result<()> {
         std::thread::sleep(std::time::Duration::from_millis(start_delay));
     }
 
+    // create user data if needed
+    ai::Config::create_user_data()?;
+
     // make sure we're the only instance running
     if !SingleInstance::new(Config::default_lock_file().to_str().unwrap())?.is_single() {
         println!("clipbud is already running, exiting...");
