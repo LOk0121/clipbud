@@ -2,10 +2,7 @@ use eframe::egui;
 use global_hotkey::{GlobalHotKeyEvent, GlobalHotKeyManager, hotkey::HotKey};
 use mouse_position::mouse_position::Mouse;
 use std::{str::FromStr, sync::mpsc};
-use tray_icon::{
-    TrayIcon,
-    menu::{MenuEvent, MenuItem},
-};
+use tray_icon::menu::MenuEvent;
 
 use crate::ai::Config;
 use crate::{ai, clipboard};
@@ -37,9 +34,7 @@ pub(crate) struct UI {
     clipboard_rx: mpsc::Receiver<clipboard::Event>,
     action_response_rx: mpsc::Receiver<ai::ActionEvent>,
     action_response_tx: mpsc::Sender<ai::ActionEvent>,
-    _tray_icon: TrayIcon,
-    configure_menu_item: MenuItem,
-    quit_menu_item: MenuItem,
+    tray: tray::Tray,
     _hotkey_manager: Option<GlobalHotKeyManager>,
 }
 
@@ -51,7 +46,7 @@ impl UI {
     ) -> anyhow::Result<Self> {
         let (action_response_tx, action_response_rx) = mpsc::channel();
 
-        let (_tray_icon, configure_menu_item, quit_menu_item) = tray::build_tray_menu_icon()?;
+        let tray = tray::build_tray_menu_icon()?;
 
         let mut _hotkey_manager = None;
         if let Some(hotkey) = config.hotkey.as_ref() {
@@ -88,9 +83,7 @@ impl UI {
             clipboard_rx,
             action_response_rx,
             action_response_tx,
-            configure_menu_item,
-            quit_menu_item,
-            _tray_icon,
+            tray,
             _hotkey_manager,
         })
     }
@@ -334,9 +327,14 @@ impl UI {
 
     fn on_tray_menu_event(&mut self) {
         if let Ok(event) = MenuEvent::receiver().try_recv() {
-            if event.id == self.quit_menu_item.id() {
+            if event.id == self.tray.reload_menu_item.id()
+                && let Err(e) = tray::reload_config()
+            {
+                self.error_message = format!("❌ Failed to reload config: {}", e);
+                self.show_error_modal = true;
+            } else if event.id == self.tray.quit_menu_item.id() {
                 std::process::exit(0)
-            } else if event.id == self.configure_menu_item.id()
+            } else if event.id == self.tray.configure_menu_item.id()
                 && let Err(e) = tray::open_config_folder()
             {
                 self.error_message = format!("❌ Failed to open config folder: {}", e);

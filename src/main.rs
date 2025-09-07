@@ -14,9 +14,18 @@ mod ui;
 struct Arguments {
     #[arg(short, long)]
     config: Option<String>,
+    #[arg(short, long)]
+    start_delay: Option<u64>,
 }
 
 fn main() -> anyhow::Result<()> {
+    let args = Arguments::parse();
+
+    // if we were restarted, wait a bit before restarting to ensure single instance is released
+    if let Some(start_delay) = args.start_delay {
+        std::thread::sleep(std::time::Duration::from_millis(start_delay));
+    }
+
     // make sure we're the only instance running
     if !SingleInstance::new(Config::default_lock_file().to_str().unwrap())?.is_single() {
         println!("clipbud is already running, exiting...");
@@ -24,7 +33,6 @@ fn main() -> anyhow::Result<()> {
     }
 
     // load config
-    let args = Arguments::parse();
     let config = ai::Config::from_file(
         &args.config.unwrap_or(
             ai::Config::default_config_file()

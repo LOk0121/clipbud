@@ -35,6 +35,24 @@ pub(crate) fn open_config_folder() -> anyhow::Result<()> {
     Ok(())
 }
 
+pub(crate) fn reload_config() -> anyhow::Result<()> {
+    // restart the process to reload configuration
+    let current_exe = std::env::current_exe()?;
+    let mut command = std::process::Command::new(current_exe);
+    // add all original command line arguments if any
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    command.args(&args);
+    // add the start delay argument to ensure the single instance is released
+    command.arg("--start-delay").arg("500");
+    // go go go!
+    command.spawn()?;
+
+    std::process::exit(0);
+
+    #[allow(unreachable_code)]
+    Ok(())
+}
+
 fn load_icons() -> (tray_icon::Icon, tray_icon::menu::Icon) {
     let (icon_rgba, icon_width, icon_height) = {
         let bytes = include_bytes!("../../assets/icon-256.png");
@@ -54,9 +72,17 @@ fn load_icons() -> (tray_icon::Icon, tray_icon::menu::Icon) {
     )
 }
 
-pub(crate) fn build_tray_menu_icon() -> anyhow::Result<(TrayIcon, MenuItem, MenuItem)> {
+pub(crate) struct Tray {
+    _icon: TrayIcon,
+    pub configure_menu_item: MenuItem,
+    pub reload_menu_item: MenuItem,
+    pub quit_menu_item: MenuItem,
+}
+
+pub(crate) fn build_tray_menu_icon() -> anyhow::Result<Tray> {
     let tray_menu = Menu::new();
     let configure_menu_item = MenuItem::new("Configure", true, None);
+    let reload_menu_item = MenuItem::new("Reload Configuration", true, None);
     let quit_menu_item = MenuItem::new("Quit", true, None);
     let (icon, menu_icon) = load_icons();
 
@@ -64,6 +90,7 @@ pub(crate) fn build_tray_menu_icon() -> anyhow::Result<(TrayIcon, MenuItem, Menu
         &MenuItem::new("Clipboard Buddy", false, None),
         &PredefinedMenuItem::separator(),
         &configure_menu_item,
+        &reload_menu_item,
         &PredefinedMenuItem::separator(),
         &PredefinedMenuItem::about(
             None,
@@ -86,5 +113,10 @@ pub(crate) fn build_tray_menu_icon() -> anyhow::Result<(TrayIcon, MenuItem, Menu
         .with_icon(icon)
         .build()?;
 
-    Ok((tray_icon, configure_menu_item, quit_menu_item))
+    Ok(Tray {
+        _icon: tray_icon,
+        configure_menu_item,
+        reload_menu_item,
+        quit_menu_item,
+    })
 }
