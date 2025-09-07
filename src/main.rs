@@ -14,7 +14,7 @@ mod ui;
 struct Arguments {
     #[arg(short, long)]
     config: Option<String>,
-    #[arg(short, long)]
+    #[arg(long)]
     start_delay: Option<u64>,
 }
 

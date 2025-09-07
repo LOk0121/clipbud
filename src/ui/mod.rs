@@ -182,7 +182,10 @@ impl UI {
 
     fn render_actions(&mut self, ui: &mut egui::Ui) {
         for action in self.config.actions.iter() {
-            if ui.button(action.button_text()).clicked() {
+            if ui
+                .button(egui::RichText::new(action.button_text()))
+                .clicked()
+            {
                 if let Some(clipboard_text) = self.clipboard_text.as_ref() {
                     self.is_loading = true;
                     self.loading_start_time = std::time::Instant::now();
@@ -417,25 +420,18 @@ impl eframe::App for UI {
 }
 
 pub fn run(event_rx: mpsc::Receiver<clipboard::Event>, config: Config) -> anyhow::Result<()> {
+    let icon = eframe::icon_data::from_png_bytes(&include_bytes!("../../assets/icon-256.png")[..])?;
+
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_title("Clipboard Buddy")
             .with_inner_size(DEFAULT_WINDOW_SIZE)
-            // borderless window
             .with_decorations(false)
-            // disable transparency for better visibility
             .with_transparent(false)
-            // always on top
             .with_always_on_top()
-            // fixed size if we wrap buttons horizontally
             .with_resizable(matches!(config.wrap_buttons, ButtonsWrap::Horizontal))
-            // start hidden
             .with_visible(false)
-            // add icon
-            .with_icon(
-                eframe::icon_data::from_png_bytes(&include_bytes!("../../assets/icon-256.png")[..])
-                    .unwrap(),
-            ),
+            .with_icon(icon),
         ..Default::default()
     };
 
