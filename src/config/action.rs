@@ -8,7 +8,7 @@ use rig::{
 use serde::Deserialize;
 
 pub(crate) enum Event {
-    Response(String),
+    Response(String, bool),
     Error(anyhow::Error),
 }
 
@@ -19,9 +19,15 @@ pub(crate) struct Action {
     pub key: Option<String>,
     pub model: String,
     pub provider: String,
+    #[serde(default = "default_paste")]
+    pub paste: bool,
 
     #[serde(skip)]
     agent: Option<Agent<CompletionModelHandle<'static>>>,
+}
+
+fn default_paste() -> bool {
+    true
 }
 
 impl Action {
@@ -45,6 +51,8 @@ impl Action {
         if let Some(agent) = &self.agent {
             let prompt = self.prompt.clone() + "\n\n" + clipboard_text;
             let agent = agent.clone();
+            let do_paste = self.paste;
+
             std::thread::spawn(move || {
                 // ugly hack to call async code from a sync context
                 let runtime = tokio::runtime::Builder::new_multi_thread()
@@ -62,7 +70,9 @@ impl Action {
                     .unwrap()
                     .block_on(async { agent.prompt(prompt).await })
                 {
-                    Ok(response) => action_response_tx.send(Event::Response(response)).unwrap(),
+                    Ok(response) => action_response_tx
+                        .send(Event::Response(response, do_paste))
+                        .unwrap(),
                     Err(e) => action_response_tx
                         .send(Event::Error(anyhow::anyhow!("{}", e)))
                         .unwrap(),

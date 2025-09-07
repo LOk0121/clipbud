@@ -22,6 +22,8 @@ actions:
     key: "S"
     model: "gpt-4o"
     provider: "openai"
+    # by default responses are pasted to the clipboard, set this to false to disable
+    paste: false
 
   - label: "Formal"
     prompt: "Make the following text more formal, only return the formal text and nothing else:"
@@ -34,3 +36,5 @@ actions:
     key: "E"
     model: "gpt-4o"
     provider: "openai"
+    # only show response without pasting to the clipboard
+    paste: false

@@ -129,10 +129,11 @@ impl UI {
             self.current_action_label.clear();
 
             match response {
-                config::ActionEvent::Response(response) => {
+                config::ActionEvent::Response(response, do_paste) => {
                     self.clipboard_text = Some(response.clone());
-                    if let Err(e) = clipboard::set_clipboard_text(response) {
-                        eprintln!("failed to set clipboard text: {}", e);
+                    if do_paste && let Err(e) = clipboard::set_clipboard_text(response) {
+                        self.error_message = format!("❌ Failed to paste to clipboard: {}", e);
+                        self.show_error_modal = true;
                     }
                 }
                 config::ActionEvent::Error(error) => {
@@ -293,9 +294,8 @@ impl UI {
 
     fn render_spinner(&self, ui: &mut egui::Ui) {
         let elapsed = self.loading_start_time.elapsed().as_secs_f32();
-
         ui.allocate_ui_with_layout(
-            egui::vec2(40.0, 40.0),
+            spinner::LAYOUT_SIZE,
             egui::Layout::centered_and_justified(egui::Direction::TopDown),
             |ui| {
                 spinner::render_spinner(ui, elapsed * 2.0);
@@ -335,14 +335,11 @@ impl UI {
                     ui.separator();
 
                     if self.is_loading {
-                        // Show loading state with current action label
                         ui.horizontal(|ui| {
                             self.render_spinner(ui);
                             ui.label(&self.current_action_label);
                         });
-                        // Buttons are hidden during loading (no buttons shown at all)
                     } else {
-                        // Normal state - buttons are interactive
                         ui.horizontal(|ui| {
                             ui.columns(self.config.actions.len(), |columns| {
                                 for (i, action) in self.config.actions.iter().enumerate() {
@@ -368,6 +365,8 @@ impl UI {
                 });
             });
         } else {
+            // when the window is created for the first time, we need to do this
+            // to hide the root container
             ctx.send_viewport_cmd_to(
                 egui::ViewportId::ROOT,
                 egui::ViewportCommand::Visible(false),
