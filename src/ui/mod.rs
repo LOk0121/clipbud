@@ -21,6 +21,7 @@ pub(crate) struct UI {
     window_visible: bool,
     window_size: egui::Vec2,
     window_position: egui::Pos2,
+    monitor_size: egui::Vec2,
 
     clipboard_text: Option<String>,
 
@@ -76,6 +77,7 @@ impl UI {
             window_visible: false,
             window_size: DEFAULT_WINDOW_SIZE,
             window_position: egui::pos2(0.0, 0.0),
+            monitor_size: egui::vec2(1024.0, 768.0),
             config,
             is_loading: false,
             loading_start_time: std::time::Instant::now(),
@@ -124,35 +126,13 @@ impl UI {
             _ => (0.0, 0.0),
         };
 
-        // ensure window stays within screen bounds
-        // let screen_rect = ctx.screen_rect();
+        // add screen bounds checking
+        let max_x = self.monitor_size.x - self.window_size.x;
+        let max_y = self.monitor_size.y - self.window_size.y;
         let offset = DEFAULT_WINDOW_OFFSET;
-        let window_x = mouse_x + offset;
-        let window_y = mouse_y + offset;
+        let window_x = (mouse_x + offset).clamp(0.0, max_x);
+        let window_y = (mouse_y + offset).clamp(0.0, max_y);
 
-        /*
-        TODO: add screen bounds checking
-
-        // adjust x position if window would go off right edge
-        if window_x + self.window_size.x > screen_rect.max.x {
-            window_x = screen_rect.max.x - self.window_size.x - offset;
-        }
-        // adjust x position if window would go off left edge
-        if window_x < screen_rect.min.x {
-            window_x = screen_rect.min.x + offset;
-        }
-
-        // adjust y position if window would go off bottom edge
-        if window_y + self.window_size.y > screen_rect.max.y {
-            window_y = screen_rect.max.y - self.window_size.y - offset;
-        }
-        // adjust y position if window would go off top edge
-        if window_y < screen_rect.min.y {
-            window_y = screen_rect.min.y + offset;
-        }
-         */
-
-        // store the window position for mouse boundary checking
         self.window_position = egui::pos2(window_x, window_y);
 
         // position and resize the window at mouse cursor (with small offset)
@@ -188,6 +168,13 @@ impl UI {
     }
 
     fn render(&mut self, ctx: &egui::Context) {
+        // update monitor size
+        ctx.input(|i| {
+            if let Some(monitor_size) = i.viewport().monitor_size {
+                self.monitor_size = monitor_size;
+            }
+        });
+
         if self.window_visible {
             egui::CentralPanel::default().show(ctx, |ui| {
                 let style = ui.style_mut();
