@@ -27,23 +27,32 @@ fn main() -> anyhow::Result<()> {
     }
 
     // create user data if needed
-    ai::Config::create_user_data()?;
+    if let Err(e) = ai::Config::create_user_data() {
+        ui::dialogs::show_error(format!("Could not create user data: {}", e));
+        return Ok(());
+    }
 
     // make sure we're the only instance running
     if !SingleInstance::new(Config::default_lock_file().to_str().unwrap())?.is_single() {
-        println!("clipbud is already running, exiting...");
+        ui::dialogs::show_error("Clipboard Buddy is already running.".to_string());
         return Ok(());
     }
 
     // load config
-    let config = ai::Config::from_file(
+    let config = match ai::Config::from_file(
         &args.config.unwrap_or(
             ai::Config::default_config_file()
                 .to_str()
                 .unwrap()
                 .to_string(),
         ),
-    )?;
+    ) {
+        Ok(config) => config,
+        Err(e) => {
+            ui::dialogs::show_error(format!("Could not load configuration: {}", e));
+            return Ok(());
+        }
+    };
 
     // prepare comms
     let (event_tx, event_rx) = mpsc::channel();
@@ -61,5 +70,9 @@ fn main() -> anyhow::Result<()> {
     .expect("error setting Ctrl-C handler");
 
     // build and run the UI event loop
-    ui::run(event_rx, config)
+    if let Err(e) = ui::run(event_rx, config) {
+        ui::dialogs::show_error(format!("Could not run UI: {}", e));
+    }
+
+    Ok(())
 }

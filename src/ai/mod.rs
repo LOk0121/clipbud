@@ -86,6 +86,7 @@ impl Config {
         let config = std::fs::read_to_string(path)?;
         let mut config = serde_yaml::from_str::<Self>(&config)?;
         config.compile()?;
+
         Ok(config)
     }
 }

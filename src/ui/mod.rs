@@ -7,6 +7,7 @@ use tray_icon::menu::MenuEvent;
 use crate::ai::{ButtonsWrap, Config};
 use crate::{ai, clipboard};
 
+pub(crate) mod dialogs;
 mod spinner;
 mod tray;
 
