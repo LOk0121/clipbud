@@ -34,6 +34,7 @@ impl Action {
     pub fn compile(&mut self) -> anyhow::Result<()> {
         let agent = DynClientBuilder::new()
             .agent(&self.provider, &self.model)?
+            .preamble(include_str!("system.md"))
             .build();
         self.agent = Some(agent);
         Ok(())

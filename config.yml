@@ -12,13 +12,13 @@ keys:
 # here you'll define the actions that will be available in the UI
 actions:
   - label: "Fix"
-    prompt: "Fix typos and grammar of the following text, but keep the original meaning and structure, only return the fixed text and nothing else:"
+    prompt: "Fix typos and grammar of the following text, but keep the original meaning and structure:"
     key: "T" # optional shortcut key
     model: "gpt-4o"
     provider: "openai"
 
   - label: "Summarize"
-    prompt: "Summarize the following text in less than 200 words, only return the summary and nothing else:"
+    prompt: "Summarize the following text in less than 200 words:"
     key: "S"
     model: "gpt-4o"
     provider: "openai"
@@ -26,13 +26,13 @@ actions:
     paste: false
 
   - label: "Formal"
-    prompt: "Make the following text more formal, only return the formal text and nothing else:"
+    prompt: "Make the following text more formal:"
     key: "F"
     model: "gpt-4o"
     provider: "openai"
 
   - label: "ELI5"
-    prompt: "Explain the following text in a way that is easy to understand for a 5 year old, only return the explanation and nothing else:"
+    prompt: "Explain the following text in a way that is easy to understand for a 5 year old:"
     key: "E"
     model: "gpt-4o"
     provider: "openai"
