@@ -13,6 +13,10 @@ keys:
 # and show all buttons by resizing the window vertically
 wrap_buttons: horizontal
 
+# hide if mouse moves outside windows
+# default: true
+hide_on_mouse_outside_window: true
+
 # here you'll define the actions that will be available in the UI
 actions:
   - label: "Fix"

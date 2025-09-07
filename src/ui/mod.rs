@@ -409,7 +409,11 @@ impl eframe::App for UI {
         self.on_esc_pressed(ctx);
         self.on_keypress(ctx);
         self.on_action_response(ctx);
-        self.on_mouse_outside_window(ctx);
+
+        if self.config.hide_on_mouse_outside_window.unwrap_or(true) {
+            self.on_mouse_outside_window(ctx);
+        }
+        
         self.show_error_modal(ctx);
 
         // always request repaint to ensure we process channel messages

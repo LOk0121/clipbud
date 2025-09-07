@@ -21,6 +21,7 @@ pub(crate) struct Config {
     pub hotkey: Option<String>,
     #[serde(default = "default_buttons_wrap")]
     pub wrap_buttons: ButtonsWrap,
+    pub hide_on_mouse_outside_window: Option<bool>,
     pub actions: Vec<Action>,
     #[serde(default = "HashMap::new")]
     pub keys: HashMap<String, String>,
