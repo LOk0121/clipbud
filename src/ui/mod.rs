@@ -92,72 +92,38 @@ impl UI {
         })
     }
 
-    fn show_on_clibboard_change_or_hotkey(&mut self, ctx: &egui::Context) {
-        let mut do_show = false;
+    fn show_error_modal(&mut self, ctx: &egui::Context) {
+        if self.show_error_modal {
+            let mut should_close = false;
+            let mut show_modal = self.show_error_modal;
 
-        // update clipboard text
-        if let Ok(event) = self.clipboard_rx.try_recv() {
-            self.clipboard_text = Some(event.text.clone());
-            // if no hotkey is set, show window
-            if self.config.hotkey.is_none() {
-                do_show = true;
-            }
-        }
-
-        // check for hotkey press if configured
-        if self.config.hotkey.is_some()
-            && let Ok(_) = GlobalHotKeyEvent::receiver().try_recv()
-        {
-            do_show = true;
-        }
-
-        // show window if needed at the last clipboard change mouse position
-        if do_show {
-            // get current mouse position
-            let (x, y) = match Mouse::get_mouse_position() {
-                Mouse::Position { x, y } => (x as f32, y as f32),
-                _ => (0.0, 0.0),
-            };
-            self.show_window(ctx, x, y);
-        }
-    }
-
-    fn update_on_action_response(&mut self, _ctx: &egui::Context) {
-        if let Ok(response) = self.action_response_rx.try_recv() {
-            // stop loading when response is received
-            self.is_loading = false;
-            self.current_action_label.clear();
-
-            match response {
-                config::ActionEvent::Response(response, do_paste) => {
-                    self.clipboard_text = Some(response.clone());
-                    if do_paste && let Err(e) = clipboard::set_clipboard_text(response) {
-                        self.error_message = format!("❌ Failed to paste to clipboard: {}", e);
-                        self.show_error_modal = true;
+            egui::Window::new("Error")
+                .collapsible(false)
+                .resizable(false)
+                .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
+                .open(&mut show_modal)
+                .show(ctx, |ui| {
+                    ui.label(self.error_message.clone());
+                    ui.add_space(10.0);
+                    if ui.button("OK").clicked() {
+                        should_close = true;
                     }
-                }
-                config::ActionEvent::Error(error) => {
-                    self.error_message = format!("❌ {}", error);
-                    self.show_error_modal = true;
-                }
+                });
+
+            if should_close || !show_modal {
+                self.show_error_modal = false;
+                self.error_message.clear();
             }
         }
     }
 
-    fn handle_menu_event(&mut self) {
-        if let Ok(event) = MenuEvent::receiver().try_recv() {
-            if event.id == self.quit_menu_item.id() {
-                std::process::exit(0)
-            } else if event.id == self.configure_menu_item.id()
-                && let Err(e) = tray::open_config_folder()
-            {
-                self.error_message = format!("❌ Failed to open config folder: {}", e);
-                self.show_error_modal = true;
-            }
-        }
-    }
+    fn show_window(&mut self, ctx: &egui::Context) {
+        // get current mouse position
+        let (mouse_x, mouse_y) = match Mouse::get_mouse_position() {
+            Mouse::Position { x, y } => (x as f32, y as f32),
+            _ => (0.0, 0.0),
+        };
 
-    fn show_window(&mut self, ctx: &egui::Context, mouse_x: f32, mouse_y: f32) {
         // ensure window stays within screen bounds
         // let screen_rect = ctx.screen_rect();
         let offset = DEFAULT_WINDOW_OFFSET;
@@ -165,7 +131,6 @@ impl UI {
         let window_y = mouse_y + offset;
 
         /*
-
         TODO: add screen bounds checking
 
         // adjust x position if window would go off right edge
@@ -195,7 +160,6 @@ impl UI {
         ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(self.window_size));
         ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
         ctx.send_viewport_cmd_to(egui::ViewportId::ROOT, egui::ViewportCommand::Visible(true));
-        ctx.request_repaint();
 
         self.window_visible = true;
     }
@@ -209,86 +173,6 @@ impl UI {
                 egui::ViewportCommand::Visible(false),
             );
             ctx.request_repaint();
-        }
-    }
-
-    fn hide_if_esc_pressed(&mut self, ctx: &egui::Context) {
-        // handle escape key to hide window
-        if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
-            self.hide_window(ctx);
-        }
-    }
-
-    fn hide_if_mouse_outside_window(&mut self, ctx: &egui::Context) {
-        if self.window_visible
-            && let Mouse::Position { x, y } = Mouse::get_mouse_position()
-        {
-            let mouse_x = x as f32;
-            let mouse_y = y as f32;
-
-            // calculate window bounds
-            let window_rect = egui::Rect::from_min_size(self.window_position, self.window_size);
-
-            // add some margin to prevent accidental hiding when moving cursor to edges
-            let margin = 20.0;
-            let expanded_rect = window_rect.expand(margin);
-
-            // check if mouse is outside the expanded window bounds
-            let mouse_pos = egui::pos2(mouse_x, mouse_y);
-            if !expanded_rect.contains(mouse_pos) {
-                self.hide_window(ctx);
-            }
-        }
-    }
-
-    fn show_error_modal(&mut self, ctx: &egui::Context) {
-        if self.show_error_modal {
-            let mut should_close = false;
-            let mut show_modal = self.show_error_modal;
-
-            egui::Window::new("Error")
-                .collapsible(false)
-                .resizable(false)
-                .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
-                .open(&mut show_modal)
-                .show(ctx, |ui| {
-                    ui.label(self.error_message.clone());
-                    ui.add_space(10.0);
-                    if ui.button("OK").clicked() {
-                        should_close = true;
-                    }
-                });
-
-            if should_close || !show_modal {
-                self.show_error_modal = false;
-                self.error_message.clear();
-            }
-        }
-    }
-
-    fn trigger_action_on_keypress(&mut self, ctx: &egui::Context) {
-        if self.is_loading {
-            return;
-        }
-
-        // check for action key presses
-        for action in self.config.actions.iter() {
-            if action.key.is_some()
-                && ctx.input(|i| {
-                    i.key_pressed(egui::Key::from_name(action.key.as_ref().unwrap()).unwrap())
-                })
-            {
-                if let Some(clipboard_text) = self.clipboard_text.as_ref() {
-                    self.is_loading = true;
-                    self.loading_start_time = std::time::Instant::now();
-                    self.current_action_label = action.label.clone();
-                    action.trigger(clipboard_text, self.action_response_tx.clone());
-                } else {
-                    self.show_error_modal = true;
-                    self.error_message = "❌ No clipboard text found".to_string();
-                }
-                break;
-            }
         }
     }
 
@@ -375,14 +259,131 @@ impl UI {
     }
 }
 
+impl UI {
+    fn on_keypress(&mut self, ctx: &egui::Context) {
+        if self.is_loading {
+            return;
+        }
+
+        // check for action key presses
+        for action in self.config.actions.iter() {
+            if action.key.is_some()
+                && ctx.input(|i| {
+                    i.key_pressed(egui::Key::from_name(action.key.as_ref().unwrap()).unwrap())
+                })
+            {
+                if let Some(clipboard_text) = self.clipboard_text.as_ref() {
+                    self.is_loading = true;
+                    self.loading_start_time = std::time::Instant::now();
+                    self.current_action_label = action.label.clone();
+                    action.trigger(clipboard_text, self.action_response_tx.clone());
+                } else {
+                    self.show_error_modal = true;
+                    self.error_message = "❌ No clipboard text found".to_string();
+                }
+                break;
+            }
+        }
+    }
+
+    fn on_clibboard_change_or_hotkey(&mut self, ctx: &egui::Context) {
+        let mut do_show = false;
+
+        // update clipboard text
+        if let Ok(event) = self.clipboard_rx.try_recv() {
+            self.clipboard_text = Some(event.text.clone());
+            // if no hotkey is set, show window
+            if self.config.hotkey.is_none() {
+                do_show = true;
+            }
+        }
+
+        // check for hotkey press if configured
+        if self.config.hotkey.is_some()
+            && let Ok(_) = GlobalHotKeyEvent::receiver().try_recv()
+        {
+            do_show = true;
+        }
+
+        // show window if needed at the last clipboard change mouse position
+        if do_show {
+            self.show_window(ctx);
+        }
+    }
+
+    fn on_action_response(&mut self, _ctx: &egui::Context) {
+        if let Ok(response) = self.action_response_rx.try_recv() {
+            // stop loading when response is received
+            self.is_loading = false;
+            self.current_action_label.clear();
+
+            match response {
+                config::ActionEvent::Response(response, do_paste) => {
+                    self.clipboard_text = Some(response.clone());
+                    if do_paste && let Err(e) = clipboard::set_clipboard_text(response) {
+                        self.error_message = format!("❌ Failed to paste to clipboard: {}", e);
+                        self.show_error_modal = true;
+                    }
+                }
+                config::ActionEvent::Error(error) => {
+                    self.error_message = format!("❌ {}", error);
+                    self.show_error_modal = true;
+                }
+            }
+        }
+    }
+
+    fn on_tray_menu_event(&mut self) {
+        if let Ok(event) = MenuEvent::receiver().try_recv() {
+            if event.id == self.quit_menu_item.id() {
+                std::process::exit(0)
+            } else if event.id == self.configure_menu_item.id()
+                && let Err(e) = tray::open_config_folder()
+            {
+                self.error_message = format!("❌ Failed to open config folder: {}", e);
+                self.show_error_modal = true;
+            }
+        }
+    }
+
+    fn on_esc_pressed(&mut self, ctx: &egui::Context) {
+        // handle escape key to hide window
+        if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
+            self.hide_window(ctx);
+        }
+    }
+
+    fn on_mouse_outside_window(&mut self, ctx: &egui::Context) {
+        if self.window_visible
+            && let Mouse::Position { x, y } = Mouse::get_mouse_position()
+        {
+            let mouse_x = x as f32;
+            let mouse_y = y as f32;
+
+            // calculate window bounds
+            let window_rect = egui::Rect::from_min_size(self.window_position, self.window_size);
+
+            // add some margin to prevent accidental hiding when moving cursor to edges
+            let margin = 20.0;
+            let expanded_rect = window_rect.expand(margin);
+
+            // check if mouse is outside the expanded window bounds
+            let mouse_pos = egui::pos2(mouse_x, mouse_y);
+            if !expanded_rect.contains(mouse_pos) {
+                self.hide_window(ctx);
+            }
+        }
+    }
+}
+
 impl eframe::App for UI {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        self.handle_menu_event();
-        self.show_on_clibboard_change_or_hotkey(ctx);
-        self.hide_if_esc_pressed(ctx);
-        self.trigger_action_on_keypress(ctx);
-        self.update_on_action_response(ctx);
-        self.hide_if_mouse_outside_window(ctx);
+        self.on_tray_menu_event();
+        self.on_clibboard_change_or_hotkey(ctx);
+        self.on_esc_pressed(ctx);
+        self.on_keypress(ctx);
+        self.on_action_response(ctx);
+        self.on_mouse_outside_window(ctx);
         self.show_error_modal(ctx);
 
         // always request repaint to ensure we process channel messages
