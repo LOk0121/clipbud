@@ -4,6 +4,7 @@ use rig::{
     agent::Agent,
     client::{builder::DynClientBuilder, completion::CompletionModelHandle},
     completion::Prompt,
+    providers::gemini::completion::gemini_api_types::{AdditionalParameters, GenerationConfig},
 };
 use serde::Deserialize;
 
@@ -32,11 +33,27 @@ fn default_paste() -> bool {
 
 impl Action {
     pub fn compile(&mut self) -> anyhow::Result<()> {
-        let agent = DynClientBuilder::new()
+        let mut builder = DynClientBuilder::new()
             .agent(&self.provider, &self.model)?
-            .preamble(include_str!("system.md"))
-            .build();
-        self.agent = Some(agent);
+            .preamble(include_str!("system.md"));
+
+        // handle google provider
+        if self.provider == "google" {
+            self.provider = "gemini".to_string();
+        }
+
+        if self.provider == "gemini" {
+            // if not passed gemini will return an error
+            let gen_config = GenerationConfig::default();
+            let config =
+                serde_json::to_value(AdditionalParameters::default().with_config(gen_config))?;
+
+            println!("gen_config: {:?}", config);
+
+            builder = builder.additional_params(config);
+        }
+
+        self.agent = Some(builder.build());
         Ok(())
     }
 

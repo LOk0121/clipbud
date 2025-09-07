@@ -893,6 +893,7 @@ dependencies = [
  "mouse_position",
  "rig-core",
  "serde",
+ "serde_json",
  "serde_yaml",
  "shellexpand",
  "single-instance",
