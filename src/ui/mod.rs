@@ -15,7 +15,7 @@ mod tray;
 
 const DEFAULT_WINDOW_SIZE: egui::Vec2 = egui::vec2(400.0, 200.0);
 const DEFAULT_WINDOW_OFFSET: f32 = 10.0;
-const DEFAULT_MAX_TEXTAREA_HEIGHT: f32 = 70.0;
+const DEFAULT_MAX_TEXTAREA_HEIGHT: f32 = 130.0;
 pub(crate) struct UI {
     config: Config,
 
@@ -186,6 +186,46 @@ impl UI {
         );
     }
 
+    fn render_main(&mut self, ui: &mut egui::Ui) {
+        let mut clipboard_text = if let Some(text) = self.clipboard_text.as_ref() {
+            text.clone()
+        } else {
+            "❌ No clipboard text found.".to_string()
+        };
+
+        egui::ScrollArea::vertical()
+            .max_height(DEFAULT_MAX_TEXTAREA_HEIGHT)
+            .show(ui, |ui| {
+                ui.add_sized(
+                    ui.available_size(),
+                    egui::TextEdit::multiline(&mut clipboard_text).interactive(false),
+                );
+            });
+
+        ui.add_space(6.0);
+
+        egui::ScrollArea::horizontal()
+            .id_salt("buttons_scroll")
+            .auto_shrink([false, false])
+            .show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    for action in self.config.actions.iter() {
+                        if ui.button(action.button_text()).clicked() {
+                            if let Some(clipboard_text) = self.clipboard_text.as_ref() {
+                                self.is_loading = true;
+                                self.loading_start_time = std::time::Instant::now();
+                                self.current_action_label = action.label.clone();
+                                action.trigger(clipboard_text, self.action_response_tx.clone());
+                            } else {
+                                self.show_error_modal = true;
+                                self.error_message = "❌ No clipboard text found".to_string();
+                            }
+                        }
+                    }
+                });
+            });
+    }
+
     fn render(&mut self, ctx: &egui::Context) {
         // update monitor size
         ctx.input(|i| {
@@ -203,45 +243,7 @@ impl UI {
                     if self.is_loading {
                         self.render_spinner(ui);
                     } else {
-                        let mut clipboard_text = if let Some(text) = self.clipboard_text.as_ref() {
-                            text.clone()
-                        } else {
-                            "❌ No clipboard text found.".to_string()
-                        };
-
-                        egui::ScrollArea::vertical()
-                            .max_height(DEFAULT_MAX_TEXTAREA_HEIGHT)
-                            .show(ui, |ui| {
-                                ui.add_sized(
-                                    ui.available_size(),
-                                    egui::TextEdit::multiline(&mut clipboard_text)
-                                        .interactive(false),
-                                );
-                            });
-
-                        ui.separator();
-
-                        ui.horizontal(|ui| {
-                            ui.columns(self.config.actions.len(), |columns| {
-                                for (i, action) in self.config.actions.iter().enumerate() {
-                                    if columns[i].small_button(action.button_text()).clicked() {
-                                        if let Some(clipboard_text) = self.clipboard_text.as_ref() {
-                                            self.is_loading = true;
-                                            self.loading_start_time = std::time::Instant::now();
-                                            self.current_action_label = action.label.clone();
-                                            action.trigger(
-                                                clipboard_text,
-                                                self.action_response_tx.clone(),
-                                            );
-                                        } else {
-                                            self.show_error_modal = true;
-                                            self.error_message =
-                                                "❌ No clipboard text found".to_string();
-                                        }
-                                    }
-                                }
-                            });
-                        });
+                        self.render_main(ui);
                     }
                 });
             });
