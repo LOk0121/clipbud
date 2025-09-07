@@ -60,4 +60,17 @@ OriginalFilename = "clipbud.exe"
 LegalCopyright = "Copyright Simone Margaritelli © 2025"
 FileDescription = "AI powered clipboard assistant"
 
+[package.metadata.bundle]
+name = "Clipboard Buddy"
+identifier = "net.evilsocket.clipbud"
+icon = ["assets/icon-256.png"]
+resources = ["assets", "assets/*.*"]
+copyright = "Copyright (c) Simone Margaritelli © 2025. All rights reserved."
+category = "Productivity"
+short_description = "AI powered clipboard assistant"
+long_description = """
+Clipboard Buddy is a AI powered clipboard assistant.
+"""
+deb_depends = ["libgtk-3"]
+osx_url_schemes = ["net.evilsocket.clipbud"]
 
