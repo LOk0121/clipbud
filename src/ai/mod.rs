@@ -21,6 +21,10 @@ impl Config {
         PathBuf::from(shellexpand::full("~/.clipbud/").unwrap().to_string())
     }
 
+    pub fn default_config_file() -> PathBuf {
+        Self::default_path().join("config.yml")
+    }
+
     pub fn default_lock_file() -> PathBuf {
         Self::default_path().join(".lock")
     }
@@ -41,6 +45,23 @@ impl Config {
     }
 
     pub fn from_file(path: &str) -> anyhow::Result<Self> {
+        // create the user folder if needed
+        let user_path = Self::default_path();
+        if !user_path.exists() {
+            std::fs::create_dir_all(&user_path)?;
+        }
+
+        // install the default config file
+        let default_config = Self::default_config_file();
+        if !default_config.exists() {
+            println!(
+                "creating default config file at {}",
+                default_config.to_str().unwrap()
+            );
+            let default_data = include_str!("default-config.yml");
+            std::fs::write(&default_config, default_data)?;
+        }
+
         let path = shellexpand::full(path)?.to_string();
         println!("loading config from: {}", path);
         let config = std::fs::read_to_string(path)?;

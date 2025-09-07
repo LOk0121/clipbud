@@ -4,10 +4,10 @@ use std::sync::mpsc;
 use clap::Parser;
 use single_instance::SingleInstance;
 
-use crate::config::Config;
+use crate::ai::Config;
 
+mod ai;
 mod clipboard;
-mod config;
 mod ui;
 
 #[derive(Debug, Parser)]
@@ -17,38 +17,27 @@ struct Arguments {
 }
 
 fn main() -> anyhow::Result<()> {
-    let user_path = config::Config::default_path();
-    if !user_path.exists() {
-        std::fs::create_dir_all(&user_path)?;
-    }
-
-    let default_config = config::Config::default_path().join("config.yml");
-    if !default_config.exists() {
-        println!(
-            "creating default config file at {}",
-            default_config.to_str().unwrap()
-        );
-        let default_data = include_str!("config/default.yml");
-        std::fs::write(&default_config, default_data)?;
-    }
-
     // make sure we're the only instance running
-    let instance = SingleInstance::new(Config::default_lock_file().to_str().unwrap())?;
-    if !instance.is_single() {
+    if !SingleInstance::new(Config::default_lock_file().to_str().unwrap())?.is_single() {
         println!("clipbud is already running, exiting...");
         return Ok(());
     }
 
     // load config
     let args = Arguments::parse();
-    let config = config::Config::from_file(
-        &args
-            .config
-            .unwrap_or(default_config.to_str().unwrap().to_string()),
+    let config = ai::Config::from_file(
+        &args.config.unwrap_or(
+            ai::Config::default_config_file()
+                .to_str()
+                .unwrap()
+                .to_string(),
+        ),
     )?;
 
+    // prepare comms
     let (event_tx, event_rx) = mpsc::channel();
 
+    // start clipboard observer
     let shutdown = clipboard::start_observer(event_tx);
     ctrlc::set_handler(move || {
         if let Some(shutdown) = shutdown.lock().unwrap().take() {
@@ -60,5 +49,6 @@ fn main() -> anyhow::Result<()> {
     })
     .expect("error setting Ctrl-C handler");
 
+    // build and run the UI event loop
     ui::run(event_rx, config)
 }

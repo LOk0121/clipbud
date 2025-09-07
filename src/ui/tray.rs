@@ -6,7 +6,7 @@ use tray_icon::{
     menu::{AboutMetadata, Menu, MenuItem, PredefinedMenuItem},
 };
 
-use crate::config::Config;
+use crate::ai::Config;
 
 pub(crate) fn open_config_folder() -> anyhow::Result<()> {
     let config_path = Config::default_path();

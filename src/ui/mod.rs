@@ -7,14 +7,15 @@ use tray_icon::{
     menu::{MenuEvent, MenuItem},
 };
 
-use crate::config::Config;
-use crate::{clipboard, config};
+use crate::ai::Config;
+use crate::{ai, clipboard};
 
 mod spinner;
 mod tray;
 
 const DEFAULT_WINDOW_SIZE: egui::Vec2 = egui::vec2(400.0, 200.0);
 const DEFAULT_WINDOW_OFFSET: f32 = 10.0;
+const DEFAULT_MAX_TEXTAREA_HEIGHT: f32 = 70.0;
 pub(crate) struct UI {
     config: Config,
 
@@ -34,8 +35,8 @@ pub(crate) struct UI {
     error_message: String,
 
     clipboard_rx: mpsc::Receiver<clipboard::Event>,
-    action_response_rx: mpsc::Receiver<config::ActionEvent>,
-    action_response_tx: mpsc::Sender<config::ActionEvent>,
+    action_response_rx: mpsc::Receiver<ai::ActionEvent>,
+    action_response_tx: mpsc::Sender<ai::ActionEvent>,
     _tray_icon: TrayIcon,
     configure_menu_item: MenuItem,
     quit_menu_item: MenuItem,
@@ -157,12 +158,30 @@ impl UI {
     }
 
     fn render_spinner(&self, ui: &mut egui::Ui) {
+        // used for the spinner angle
         let elapsed = self.loading_start_time.elapsed().as_secs_f32();
-        ui.allocate_ui_with_layout(
-            spinner::LAYOUT_SIZE,
-            egui::Layout::centered_and_justified(egui::Direction::TopDown),
+        // center the spinner and label vertically and horizontally
+        let available_rect = ui.available_rect_before_wrap();
+        ui.allocate_new_ui(
+            egui::UiBuilder::new()
+                .max_rect(available_rect)
+                .layout(egui::Layout::top_down(egui::Align::Center)),
             |ui| {
-                spinner::render_spinner(ui, elapsed * 2.0);
+                let content_height = spinner::LAYOUT_SIZE.y + 8.0 + 20.0;
+                let vertical_offset = (available_rect.height() - content_height) / 2.0;
+
+                if vertical_offset > 0.0 {
+                    ui.add_space(vertical_offset);
+                }
+                ui.allocate_ui_with_layout(
+                    spinner::LAYOUT_SIZE,
+                    egui::Layout::centered_and_justified(egui::Direction::TopDown),
+                    |ui| {
+                        spinner::render_spinner(ui, elapsed * 2.0);
+                    },
+                );
+                ui.add_space(8.0);
+                ui.label(&self.current_action_label);
             },
         );
     }
@@ -177,38 +196,31 @@ impl UI {
 
         if self.window_visible {
             egui::CentralPanel::default().show(ctx, |ui| {
-                let style = ui.style_mut();
-                style.visuals.window_fill = egui::Color32::from_rgb(240, 240, 240);
-                style.spacing.item_spacing = egui::vec2(8.0, 4.0);
-                style.spacing.window_margin = egui::Margin::same(12.0);
-
                 ui.vertical(|ui| {
                     ui.label(format!("📋 Clipboard Buddy v{}", env!("CARGO_PKG_VERSION")));
                     ui.separator();
 
-                    let mut clipboard_text = if let Some(text) = self.clipboard_text.as_ref() {
-                        text.clone()
-                    } else {
-                        "❌ No clipboard text found.".to_string()
-                    };
-
-                    egui::ScrollArea::vertical()
-                        .max_height(70.0)
-                        .show(ui, |ui| {
-                            ui.add_sized(
-                                ui.available_size(),
-                                egui::TextEdit::multiline(&mut clipboard_text).interactive(false),
-                            );
-                        });
-
-                    ui.separator();
-
                     if self.is_loading {
-                        ui.horizontal(|ui| {
-                            self.render_spinner(ui);
-                            ui.label(&self.current_action_label);
-                        });
+                        self.render_spinner(ui);
                     } else {
+                        let mut clipboard_text = if let Some(text) = self.clipboard_text.as_ref() {
+                            text.clone()
+                        } else {
+                            "❌ No clipboard text found.".to_string()
+                        };
+
+                        egui::ScrollArea::vertical()
+                            .max_height(DEFAULT_MAX_TEXTAREA_HEIGHT)
+                            .show(ui, |ui| {
+                                ui.add_sized(
+                                    ui.available_size(),
+                                    egui::TextEdit::multiline(&mut clipboard_text)
+                                        .interactive(false),
+                                );
+                            });
+
+                        ui.separator();
+
                         ui.horizontal(|ui| {
                             ui.columns(self.config.actions.len(), |columns| {
                                 for (i, action) in self.config.actions.iter().enumerate() {
@@ -303,14 +315,14 @@ impl UI {
             self.current_action_label.clear();
 
             match response {
-                config::ActionEvent::Response(response, do_paste) => {
+                ai::ActionEvent::Response(response, do_paste) => {
                     self.clipboard_text = Some(response.clone());
                     if do_paste && let Err(e) = clipboard::set_clipboard_text(response) {
                         self.error_message = format!("❌ Failed to paste to clipboard: {}", e);
                         self.show_error_modal = true;
                     }
                 }
-                config::ActionEvent::Error(error) => {
+                ai::ActionEvent::Error(error) => {
                     self.error_message = format!("❌ {}", error);
                     self.show_error_modal = true;
                 }
