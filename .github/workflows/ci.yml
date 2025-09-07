@@ -27,7 +27,7 @@ jobs:
 
       - name: Install system packages
         if: matrix.os == 'ubuntu-latest'
-        run: sudo apt-get install libglib2.0-dev
+        run: sudo apt-get install libglib2.0-dev libpango-1.0-0
 
       - name: Lint
         run: cargo clippy --all-targets
