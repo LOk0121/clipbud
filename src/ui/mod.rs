@@ -197,9 +197,7 @@ impl UI {
                         .show(ui, |ui| {
                             ui.add_sized(
                                 ui.available_size(),
-                                egui::TextEdit::multiline(&mut clipboard_text)
-                                    .interactive(false)
-                                    .font(egui::TextStyle::Monospace),
+                                egui::TextEdit::multiline(&mut clipboard_text).interactive(false),
                             );
                         });
 
