@@ -10,7 +10,11 @@ use tray_icon::{
 use crate::config::Config;
 use crate::{clipboard, config};
 
+mod spinner;
 mod tray;
+
+const DEFAULT_WINDOW_SIZE: egui::Vec2 = egui::vec2(400.0, 200.0);
+const DEFAULT_WINDOW_OFFSET: f32 = 10.0;
 pub(crate) struct UI {
     config: Config,
 
@@ -70,8 +74,8 @@ impl UI {
         Ok(Self {
             clipboard_text: None,
             window_visible: false,
-            window_size: egui::vec2(400.0, 200.0),
-            window_position: egui::pos2(-2000.0, -2000.0),
+            window_size: DEFAULT_WINDOW_SIZE,
+            window_position: egui::pos2(0.0, 0.0),
             config,
             is_loading: false,
             loading_start_time: std::time::Instant::now(),
@@ -155,7 +159,7 @@ impl UI {
     fn show_window(&mut self, ctx: &egui::Context, mouse_x: f32, mouse_y: f32) {
         // ensure window stays within screen bounds
         // let screen_rect = ctx.screen_rect();
-        let offset = 10.0;
+        let offset = DEFAULT_WINDOW_OFFSET;
         let window_x = mouse_x + offset;
         let window_y = mouse_y + offset;
 
@@ -189,17 +193,20 @@ impl UI {
         ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(self.window_position));
         ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(self.window_size));
         ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
+        ctx.send_viewport_cmd_to(egui::ViewportId::ROOT, egui::ViewportCommand::Visible(true));
+        ctx.request_repaint();
 
         self.window_visible = true;
     }
 
     fn hide_window(&mut self, ctx: &egui::Context) {
         if !self.is_loading {
-            // move window off-screen when hidden
             self.window_visible = false;
-            self.window_position = egui::pos2(-2000.0, -2000.0);
             self.show_error_modal = false;
-            ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(self.window_position));
+            ctx.send_viewport_cmd_to(
+                egui::ViewportId::ROOT,
+                egui::ViewportCommand::Visible(false),
+            );
             ctx.request_repaint();
         }
     }
@@ -212,11 +219,9 @@ impl UI {
     }
 
     fn hide_if_mouse_outside_window(&mut self, ctx: &egui::Context) {
-        if !self.window_visible {
-            return;
-        }
-
-        if let Mouse::Position { x, y } = Mouse::get_mouse_position() {
+        if self.window_visible
+            && let Mouse::Position { x, y } = Mouse::get_mouse_position()
+        {
             let mouse_x = x as f32;
             let mouse_y = y as f32;
 
@@ -288,26 +293,12 @@ impl UI {
 
     fn render_spinner(&self, ui: &mut egui::Ui) {
         let elapsed = self.loading_start_time.elapsed().as_secs_f32();
-        let radians_per_second = elapsed * 2.0;
 
         ui.allocate_ui_with_layout(
             egui::vec2(40.0, 40.0),
             egui::Layout::centered_and_justified(egui::Direction::TopDown),
             |ui| {
-                let (rect, _) =
-                    ui.allocate_exact_size(egui::vec2(30.0, 30.0), egui::Sense::hover());
-                let painter = ui.painter();
-                let center = rect.center();
-                let radius = 12.0;
-
-                // spinning circle
-                let stroke = egui::Stroke::new(3.0, egui::Color32::from_rgb(100, 150, 255));
-                painter.circle_stroke(center, radius, stroke);
-                // moving dot
-                let dot_angle = radians_per_second;
-                let dot_pos =
-                    center + egui::vec2(radius * dot_angle.cos(), radius * dot_angle.sin());
-                painter.circle_filled(dot_pos, 4.0, egui::Color32::from_rgb(100, 150, 255));
+                spinner::render_spinner(ui, elapsed * 2.0);
             },
         );
     }
@@ -376,6 +367,11 @@ impl UI {
                     }
                 });
             });
+        } else {
+            ctx.send_viewport_cmd_to(
+                egui::ViewportId::ROOT,
+                egui::ViewportCommand::Visible(false),
+            );
         }
     }
 }
@@ -401,9 +397,7 @@ pub fn run(event_rx: mpsc::Receiver<clipboard::Event>, config: Config) -> anyhow
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_title("Clipboard Buddy")
-            .with_inner_size([400.0, 200.0])
-            // start off-screen
-            .with_position([-2000.0, -2000.0])
+            .with_inner_size(DEFAULT_WINDOW_SIZE)
             // borderless window
             .with_decorations(false)
             // disable transparency for better visibility
@@ -412,8 +406,8 @@ pub fn run(event_rx: mpsc::Receiver<clipboard::Event>, config: Config) -> anyhow
             .with_always_on_top()
             // fixed size
             .with_resizable(false)
-            // must be visible (we control visibility via position)
-            .with_visible(true)
+            // start hidden
+            .with_visible(false)
             // add icon
             .with_icon(
                 eframe::icon_data::from_png_bytes(&include_bytes!("../../assets/icon-256.png")[..])
