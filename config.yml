@@ -9,6 +9,10 @@ keys:
   OPENAI_API_KEY: "sk-proj-1234567890"
   ANTHROPIC_API_KEY: "sk-ant-api03-..."
 
+# default to horizontal wrap if not set, set to none to disable wrapping
+# and show all buttons by resizing the window vertically
+wrap_buttons: horizontal
+
 # here you'll define the actions that will be available in the UI
 actions:
   - label: "Fix"

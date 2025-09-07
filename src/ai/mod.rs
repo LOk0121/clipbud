@@ -8,12 +8,26 @@ pub(crate) use action::Action;
 pub(crate) use action::Event as ActionEvent;
 
 #[derive(Deserialize)]
+pub(crate) enum ButtonsWrap {
+    #[serde(rename = "horizontal")]
+    Horizontal,
+    #[serde(rename = "none")]
+    None,
+}
+
+#[derive(Deserialize)]
 pub(crate) struct Config {
     pub theme: Option<String>,
     pub hotkey: Option<String>,
+    #[serde(default = "default_buttons_wrap")]
+    pub wrap_buttons: ButtonsWrap,
     pub actions: Vec<Action>,
     #[serde(default = "HashMap::new")]
     pub keys: HashMap<String, String>,
+}
+
+fn default_buttons_wrap() -> ButtonsWrap {
+    ButtonsWrap::Horizontal
 }
 
 impl Config {

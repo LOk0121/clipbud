@@ -4,7 +4,7 @@ use mouse_position::mouse_position::Mouse;
 use std::{str::FromStr, sync::mpsc};
 use tray_icon::menu::MenuEvent;
 
-use crate::ai::Config;
+use crate::ai::{ButtonsWrap, Config};
 use crate::{ai, clipboard};
 
 mod spinner;
@@ -179,7 +179,23 @@ impl UI {
         );
     }
 
-    fn render_main(&mut self, ui: &mut egui::Ui) {
+    fn render_actions(&mut self, ui: &mut egui::Ui) {
+        for action in self.config.actions.iter() {
+            if ui.button(action.button_text()).clicked() {
+                if let Some(clipboard_text) = self.clipboard_text.as_ref() {
+                    self.is_loading = true;
+                    self.loading_start_time = std::time::Instant::now();
+                    self.current_action_label = action.label.clone();
+                    action.trigger(clipboard_text, self.action_response_tx.clone());
+                } else {
+                    self.show_error_modal = true;
+                    self.error_message = "❌ No clipboard text found".to_string();
+                }
+            }
+        }
+    }
+
+    fn render_main(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
         let mut clipboard_text = if let Some(text) = self.clipboard_text.as_ref() {
             text.clone()
         } else {
@@ -197,26 +213,35 @@ impl UI {
 
         ui.add_space(6.0);
 
-        egui::ScrollArea::horizontal()
-            .id_salt("buttons_scroll")
-            .auto_shrink([false, false])
-            .show(ui, |ui| {
-                ui.horizontal(|ui| {
-                    for action in self.config.actions.iter() {
-                        if ui.button(action.button_text()).clicked() {
-                            if let Some(clipboard_text) = self.clipboard_text.as_ref() {
-                                self.is_loading = true;
-                                self.loading_start_time = std::time::Instant::now();
-                                self.current_action_label = action.label.clone();
-                                action.trigger(clipboard_text, self.action_response_tx.clone());
-                            } else {
-                                self.show_error_modal = true;
-                                self.error_message = "❌ No clipboard text found".to_string();
-                            }
-                        }
-                    }
+        match self.config.wrap_buttons {
+            ButtonsWrap::Horizontal => {
+                egui::ScrollArea::horizontal()
+                    .id_salt("buttons_scroll")
+                    .auto_shrink([false, false])
+                    .show(ui, |ui| {
+                        ui.horizontal(|ui| {
+                            self.render_actions(ui);
+                        });
+                    });
+            }
+            ButtonsWrap::None => {
+                let response = ui.horizontal_wrapped(|ui| {
+                    self.render_actions(ui);
                 });
-            });
+                // add response height to current window height (only the first time)
+                if self.window_size.y == DEFAULT_WINDOW_SIZE.y {
+                    let rows_height = response.response.rect.height() - 20.0;
+                    let new_height = self.window_size.y + rows_height;
+                    self.window_size.y = new_height;
+                    ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(
+                        self.window_size.x,
+                        new_height,
+                    )));
+                    // make window non-resizable after calculating height
+                    ctx.send_viewport_cmd(egui::ViewportCommand::Resizable(false));
+                }
+            }
+        }
     }
 
     fn render(&mut self, ctx: &egui::Context) {
@@ -236,7 +261,7 @@ impl UI {
                     if self.is_loading {
                         self.render_spinner(ui);
                     } else {
-                        self.render_main(ui);
+                        self.render_main(ui, ctx);
                     }
                 });
             });
@@ -401,8 +426,8 @@ pub fn run(event_rx: mpsc::Receiver<clipboard::Event>, config: Config) -> anyhow
             .with_transparent(false)
             // always on top
             .with_always_on_top()
-            // fixed size
-            .with_resizable(false)
+            // fixed size if we wrap buttons horizontally
+            .with_resizable(matches!(config.wrap_buttons, ButtonsWrap::Horizontal))
             // start hidden
             .with_visible(false)
             // add icon

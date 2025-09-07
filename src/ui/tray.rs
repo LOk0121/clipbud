@@ -43,7 +43,9 @@ pub(crate) fn reload_config() -> anyhow::Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     command.args(&args);
     // add the start delay argument to ensure the single instance is released
-    command.arg("--start-delay").arg("500");
+    if !args.contains(&"--start-delay".to_string()) {
+        command.arg("--start-delay").arg("500");
+    }
     // go go go!
     command.spawn()?;
 
