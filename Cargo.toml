@@ -64,7 +64,6 @@ FileDescription = "AI powered clipboard assistant"
 name = "Clipboard Buddy"
 identifier = "net.evilsocket.clipbud"
 icon = ["assets/icon-256.png"]
-resources = ["assets", "assets/*.*"]
 copyright = "Copyright (c) Simone Margaritelli © 2025. All rights reserved."
 category = "Productivity"
 short_description = "AI powered clipboard assistant"
