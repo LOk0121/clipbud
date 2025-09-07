@@ -162,7 +162,7 @@ impl UI {
         let elapsed = self.loading_start_time.elapsed().as_secs_f32();
         // center the spinner and label vertically and horizontally
         let available_rect = ui.available_rect_before_wrap();
-        ui.allocate_new_ui(
+        ui.scope_builder(
             egui::UiBuilder::new()
                 .max_rect(available_rect)
                 .layout(egui::Layout::top_down(egui::Align::Center)),

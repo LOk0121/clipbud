@@ -1,3 +1,5 @@
+use eframe::egui;
+
 pub(crate) const LAYOUT_SIZE: egui::Vec2 = egui::vec2(40.0, 40.0);
 
 pub(crate) fn render_spinner(ui: &mut egui::Ui, angle: f32) {
