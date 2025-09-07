@@ -5,8 +5,8 @@ hotkey: "CMD+CTRL+C"
 # theme: dark
 
 # you can add your API keys here, or set them as environment variables
-# keys:
-#  OPENAI_API_KEY: "sk-proj-1234567890"
+keys:
+  OPENAI_API_KEY: "sk-proj-1234567890"
 #  ANTHROPIC_API_KEY: "sk-ant-api03-..."
 
 # here you'll define the actions that will be available in the UI
