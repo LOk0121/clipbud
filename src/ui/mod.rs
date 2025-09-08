@@ -413,7 +413,7 @@ impl eframe::App for UI {
         if self.config.hide_on_mouse_outside_window.unwrap_or(true) {
             self.on_mouse_outside_window(ctx);
         }
-        
+
         self.show_error_modal(ctx);
 
         // always request repaint to ensure we process channel messages
@@ -424,6 +424,9 @@ impl eframe::App for UI {
 }
 
 pub fn run(event_rx: mpsc::Receiver<clipboard::Event>, config: Config) -> anyhow::Result<()> {
+    #[cfg(target_os = "linux")]
+    gtk::init()?;
+
     let icon = eframe::icon_data::from_png_bytes(&include_bytes!("../../assets/icon-256.png")[..])?;
 
     let options = eframe::NativeOptions {
