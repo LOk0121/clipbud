@@ -22,10 +22,10 @@ Clipboard Buddy (`clipbud`) is a cross platform utility that interacts with your
 
 ## Quick Start
 
-`clipbud` is published as a binary crate on [crates.io](https://crates.io/crates/clipbud). If you have [Cargo installed](https://rustup.rs/), you can:
+If you have [Cargo installed](https://rustup.rs/), you can:
 
 ```sh
-cargo install clipbud
+cargo install --git https://github.com/evilsocket/clipbud.git
 ```
 
 This will compile its sources and install the binary in `$HOME/.cargo/bin/clipbud`. You are now ready to go! 🚀
