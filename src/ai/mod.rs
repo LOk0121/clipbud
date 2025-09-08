@@ -22,6 +22,10 @@ pub(crate) struct Config {
     #[serde(default = "default_buttons_wrap")]
     pub wrap_buttons: ButtonsWrap,
     pub hide_on_mouse_outside_window: Option<bool>,
+
+    #[serde(default = "default_ui_scale")]
+    pub ui_scale: Option<f32>,
+
     pub actions: Vec<Action>,
     #[serde(default = "HashMap::new")]
     pub keys: HashMap<String, String>,
@@ -29,6 +33,10 @@ pub(crate) struct Config {
 
 fn default_buttons_wrap() -> ButtonsWrap {
     ButtonsWrap::Horizontal
+}
+
+fn default_ui_scale() -> Option<f32> {
+    Some(1.0)
 }
 
 impl Config {

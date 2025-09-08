@@ -414,6 +414,9 @@ impl eframe::App for UI {
             self.on_mouse_outside_window(ctx);
         }
 
+        let ui_scale = self.config.ui_scale.unwrap_or(1.0);
+        ctx.set_pixels_per_point(ui_scale);
+
         self.show_error_modal(ctx);
 
         // always request repaint to ensure we process channel messages
