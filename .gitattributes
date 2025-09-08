@@ -1,0 +1,4 @@
+/Dockerfile linguist-vendored
+/pkg linguist-vendored
+/assets linguist-vendored
+*.yml linguist-vendored
